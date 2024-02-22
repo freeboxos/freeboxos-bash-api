@@ -11,6 +11,7 @@ fbx-delta-nba_bash_api.sh
 
 |Supported Freebox|Supported Iliadbox|Virtual Machine Support|
 |:-:|:-:|:-:|
+|ULTRA| - |YES|
 |DELTA| - |YES|
 |POP | POP|NO|
 |REVOLUTION| - |NO|
@@ -20,7 +21,7 @@ fbx-delta-nba_bash_api.sh
 
 
 - ### 100% BASH  
-- ### APIv9 
+- ### APIv10 / APIv11 (ULTRA) 
 - ### USE AT YOUR OWN RISK
 
 
