@@ -58,8 +58,8 @@ ITALY="no"
 # Support of auto relogin (necessary for long monitoring tasks)
 # here you need to put a strong password used to protect your "app-token" in the session
 # As an example here is the password I'm using to protect my token in the session
-#_APP_PASSWORD="DefineAStrongPassword"
-_APP_PASSWORD="XtRkkY7v+mYTs3W"
+#_APP_PASSWORD="DefineAStrongPasswordM"
+_APP_PASSWORD="Py1PqlQK+MxoDn3Y"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
 # This option require you add a local domain name and a private certificate 
@@ -92,7 +92,7 @@ ILIADBOX_WAN_URL=""
 # NB: Working the same way for ILIADBOX_LAN_CACERT
 # Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so   
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
-#FREEBOX_LAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA4096.pem"
+#FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
 FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
@@ -101,7 +101,7 @@ ILIADBOX_LAN_CACERT=""
 # NB: Working the same way for ILIADBOX_LAN_CACERT
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
 # for example to access my box API from my WAN domain and my WAN private PKI I set:
-#FREEBOX_WAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA8192.pem"
+#FREEBOX_WAN_CACERT="/usr/share/ca-certificates/user/my-public-domain-rootCA.pem"
 FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
 
@@ -109,7 +109,7 @@ ILIADBOX_WAN_CACERT=""
 #-------------------------END OF USER CONFIGURABLE OPTIONS -------------------------#
 
 
-# Freebox / Iliadbox default local URL
+# Freebox / Iliadbox default local URL :   --hardcoded-- 
 # (default, hardcoded, used if $FREEBOX_WAN_URL and $FREEBOX_LAN_URL are not set 
 # or for Iliadbox if $ILIADBOX_WAN_URL and $ILIADBOX_LAN_URL are not set) 
 # Freebox API will always be reachable on this URL from freebox lan network
@@ -354,6 +354,7 @@ esc_sed="\x1B"
 norm_sed="${esc_sed}[0m"
 red_sed="${esc_sed}[31m"
 lblue_sed="${esc_sed}[36m"
+white_sed="${esc_sed}[37m"
 blue_sed="${esc_sed}[34m"
 green_sed="${esc_sed}[32m"
 purpl_sed="${esc_sed}[35m"
@@ -396,10 +397,10 @@ fi
 ######## FUNCTIONS ########
 
 ######## EXIT FUNTCION STACK WITHOUT KILLING BASH SHELL - replace exit() ########
-# Function which tand like CTRL+C to exit the bash stack
+# Function which stand like CTRL+C to exit the bash stack
 ctrlc () {
 kill -INT $$
-}	
+}
 
 
 ######## MAKE TMP CACERT FILE ########
@@ -691,7 +692,6 @@ dump_json_keys_values () {
 }
 
 
-
 # NBA: Original _check_success function: too slow
 _check_success_old () {
     local value=$(get_json_value_for_key "$1" success)
@@ -711,8 +711,11 @@ _check_success () {
 			|cut -d':' -f2 \
 			|sed -e 's/,//g' -e 's/}\+//g'  
 		)
+    #echo "$val" >&2 
+    #echo $value  >&2 
     if [[ "$value" != true ]]
     then 
+	   # echo "$val" >&2 
 	    local msg=$(echo ${val} |tr "," "\n" |egrep msg |cut -d'"' -f4)
 	    local error_code=$(echo ${val} |tr "," "\n" |egrep error_code |cut -d'"' -f4)
 	    echo  -e "${RED}${msg}: ${error_code}" >&2 
@@ -856,13 +859,19 @@ add_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")	    
     [[ -n "$data" ]] && options+=(-d "${data}")
-    echo -e "curl -s \"$url\" \"${options[@]}\"\n" # debug
+    #cho -e "curl -s \"$url\" \"${options[@]}\"\n" # debug
     answer=$(curl -s "$url" "${options[@]}")
-    #_check_success "$answer" || return 1
-    _check_success "$answer" || ctrlc
+    if [[ ${action} == "listdisk" ]] 
+    then 
+	    _check_success "$answer"
+    else
+    	    #_check_success "$answer" || return 1
+	    _check_success "$answer" || ctrlc
+    fi	    
     echo "$answer"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
+
 
 # simple API call forcing HTTP DELETE   
 del_freebox_api () {
@@ -1946,6 +1955,7 @@ fi \
 
 mon_fs_task_api () {
     local api_url="fs/tasks"
+    #[[ ${task_type} == "disk" ]] && local api_url="vm/disk/task" 
     local task_id="$1"
     local state=""
     local progress="0"
@@ -3518,17 +3528,42 @@ check_login_freebox || (echo -e "${RED}Vous devez vous connecter pour acc√©der √
 #esac
 
 # NBA : Function which will print help on error for VM actions :
-# - vm_start
-# - vm_stop
-# - vm_restart
-# - vm_shutdown
+# - vm_start 
+# - vm_stop / vm_shutdown
+# - vm_restart / vm_reload
 # - vm_console
 # - vm_sconsole # start and launch console
 # - vm_show
 # - vm_detail
-# - /!\ project to add 'list_vm' too
+# - list_vm
 # ${action} parameter must be set by function which calling 'param_vm_action_err' (or by primitive) 
 # This function return 1 and error=1
+
+vm_param () {
+error=1
+echo -e "VM PARAMETERS :  ${BLUE}
+         - <id>                 : <id> of this VM - not modifiable (number : 0 <= id <32) 
+         - mac                  : mac address of this VM - not modifiable (format: xx:xx:xx:xx:xx) 
+         - name=                : name of this VM - VM-only (string, max 31 characters) 
+         - vcpu=                : number of virtual CPUs to allocate to this VM - VM-only (integer)
+         - memory=              : memory allocated to this VM in megabytes - VM-only (integer)
+         - disk_type=           : type of disk image, values : qcow2|raw - VM+disk (string)
+         - disk_path=           : path to the hard disk image of this VM - VM+disk (string)
+         - disk_size=           : hard disk final size in bytes (integer) - disk-only
+         - disk_shrink=         : allow or not the disk to be shrink - disk-only (bool) ${RED}DANGEROUS${norm}${BLUE}
+         - cd_path=             : path to CDROM device ISO image - optional - VM-only (string) 
+         - os=                  : VM OS: unknown|fedora|debian|ubuntu|freebsd|centos|jeedom|homebridge 
+         - enable_screen=       : virtual screen using VNC websocket protocol - VM-only (bool) 
+         - bind_usb_ports=      : syntax : bind_usb_ports='\"usb-external-type-c\",\"usb-external-type-a\"' 
+         - enable_cloudinit=    : enable or not  passing data through cloudinit - VM-only (bool) 
+         - cloudinit_hostname=  : when cloudinit is enabled: hostname (string, max 59 characters)
+         - cloudinit_userdata=  : path to file containing user-data raw yaml (file max 32767 characters)${norm}
+
+WARNING : ${BLUE}when you ${PURPL}modify${norm}${BLUE} a VM, you must explicitly specify on the cmdline ${PURPL}'cloudinit_userdata=\$val'${norm}${BLUE},
+          or previous values for ${PURPL}'cloudinit_userdata'${norm}${BLUE} parameter ${RED}will be reset to null ('')${norm} 
+"
+return 1
+}
 
 param_vm_action_err () {
 
@@ -3540,6 +3575,9 @@ param_vm_action_err () {
         || "${action}" == "reload" \
         || "${action}" == "detail" \
         || "${action}" == "show" \
+        || "${action}" == "add" \
+        || "${action}" == "delete" \
+        || "${action}" == "modify" \
         || "${action}" == "shutdown" \
         || "${action}" == "sconsole" \
         || "${action}" == "console" ]] \
@@ -3557,11 +3595,13 @@ param_vm_action_err () {
         || "${action}" == "restart" \
         || "${action}" == "reload" \
         || "${action}" == "detail" \
+        || "${action}" == "delete" \
         || "${action}" == "show" \
         || "${action}" == "shutdown" ]] \
 && echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a number${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}you can get a list of all virtuals machines (showing all 'id'), just run: ${norm}\n${BLUE}${listfunct}${norm}\n" \
 && echo -e "EXAMPLE:\n${BLUE}${progfunct} 5 ${norm}\n" 
+
 
 [[ "${action}" == "console" \
         || "${action}" == "sconsole" ]] \
@@ -3570,7 +3610,23 @@ param_vm_action_err () {
 && echo -e "EXAMPLE:\n${BLUE}${progfunct} 5 ${norm}\n" \
 && echo -e "EXAMPLE FULL:\n${BLUE}${progfunct} 5 screen\n${progfunct} 5 detached ${norm}\n" 
 #echo	
-}	
+
+[[ "${action}" == "add" ]] \
+	&& echo -e "\nERROR: ${RED}<param> must be some of:${norm}${BLUE}
+name=|vcpu=|memory=|disk_type=|disk_path=|cd_path=|os=|enable_screen=|bind_usb_ports=|enable_cloudinit=|cloudinit_hostname=|cloudinit_userdata=${norm}\n" |tr "|" "\n"\
+	&& echo -e "Please run 'vm_param' with no parameters for parameters detail\n" \
+        && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to create a VM: ${norm}\n${BLUE}disk_type= \ndisk_path= \nvcpus= \nmemory= \nname= ${norm}\n" \
+        && echo -e "EXAMPLE:\n${BLUE}${progfunct} disk_type=\"qcow2\" disk_path=\"/freeboxdisk/vmdiskpath/myvmdisk.qcow2\" vcpus=\"1\" memory=\"2048\" cd_path=\"/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso\" os=\"debian\" enable_screen=\"true\"  enable_cloudinit=\"true\" cloudinit_hostname=\"14RV-FSRV-49\" cloudinit_userdata=\"cloudinit-userdata.yml\" bind_usb_ports='\"usb-external-type-c\",\"usb-external-type-a\"' name=\"14RV-FSRV-49.dmz.lan\"${norm}\n"
+
+[[ "${action}" == "modify" ]] \
+        && echo -e "\nERROR: ${RED}<param> must be some of:${norm}${BLUE}
+<id>|name=|vcpu=|memory=|disk_type=|disk_path=|cd_path=|os=|enable_screen=|bind_usb_ports=|enable_cloudinit=|cloudinit_hostname=|cloudinit_userdata=${norm}\n" |tr "|" "\n"\
+	&& echo -e "Please run 'vm_param' with no parameters for parameters detail\n" \
+        && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to modify a VM: ${norm}\n${BLUE}<id> \ndisk_type= \ndisk_path= \nvcpus= \nmemory= \nname= ${norm}\n" \
+        && echo -e "EXAMPLE:\n${BLUE}${progfunct} 31 disk_type=\"qcow2\" disk_path=\"/freeboxdisk/vmdiskpath/myvmdisk.qcow2\" vcpus=\"1\" memory=\"2048\" cd_path=\"/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso\" os=\"debian\" enable_screen=\"true\" cloudinit_hostname=\"14RV-FSRV-49\" cloudinit_userdata=\"cloudinit-userdata.yml\" bind_usb_ports='\"usb-external-type-c\",\"usb-external-type-a\"' name=\"14RV-FSRV-49.dmz.lan\"${norm}\n" \
+        && echo -e "WARNING: \n${BLUE}When modifying VM, if you do not explicitly specify on the cmdline ${PURPL}'cloudinit_userdata=\$val' ${BLUE}(${PURPL}\$val'${norm} ${BLUE}must be a ${PURPL}'yaml cloudinit' ${BLUE}file), previous values for ${PURPL}'cloudinit_userdata'${norm} ${BLUE}parameter ${RED}will be reset to null ('')${norm}${BLUE}. Others values are retrieve automatically from existing VM configuration${norm}\n" 
+return 1 
+}
 
 check_and_feed_vm_action_param () {
 	# This function validate VM acctions parameters (id) and return 'vm_action_param_object'
@@ -3601,7 +3657,73 @@ then
 	[[ "${vm_action_param_object}" == "detached" ]] && check_tool dtach
 
 fi 
-#echo	
+if [[ "$numparam" -ge "2" ]] && [[ "${error}" != "1" ]]
+then 
+	[[ "${action}" != "console" && "${action}" != "sconsole" ]] \
+		&& param_vm_action_err
+fi
+}
+
+check_vm_param () {
+        # This function validate VM parameters and return 'vm_param_object'
+        # when there is more than 1 param and call param_vm_action_err on error
+        local param=("${@}")
+        local nameparam=("")
+        local valueparam=("")   numparam="$#"
+        local action=${action}  idparam=0                
+        error=0
+        vm_action_param_object=("")
+
+	[[ "$numparam" -lt "5" ]] && param_vm_action_err
+
+if [[ "${action}" == "add" ]] && [[ "${error}" != "1" ]]
+	then
+	while [[ "${param[$idparam]}" != "" ]]
+		do
+		[[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "name" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "memory" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "vcpus" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_type" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_path" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cd_path" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "os" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enable_screen" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "bind_usb_ports" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enable_cloudinit" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_hostname" \
+	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_userdata" ]] \
+		&& param_vm_action_err && break
+		#nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                #valueparam=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+		((idparam++))
+	done	
+fi
+
+if [[ "${action}" == "modify" ]] && [[ "${error}" != "1" ]]
+        then
+	id=$1	
+        [[ ${id} =~ ^[[:digit:]]+$ ]] || param_vm_action_err
+	local idparam=1
+	[[ "${error}" != "1" ]] && while [[ "${param[$idparam]}" != "" ]]
+		                do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "name" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "memory" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "vcpus" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_type" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_path" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cd_path" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "os" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enable_screen" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "bind_usb_ports" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enable_cloudinit" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_hostname" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_userdata" ]] \
+                && param_vm_action_err && break
+                #nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                #valueparam=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                ((idparam++))
+        done
+fi
 }
 
 # NBA : function which get vm object variable for all VM from API call 
@@ -3639,11 +3761,202 @@ done
 }
 
 
+create_vm_variables () {
+	check_vm_param ${@}
+        local param=("${@}")
+        local idparam=0
+        local nameparam=("")
+        local valueparam=("")
+        vm_object_create=("")
+
+if [[ "${error}" != "1" ]]  
+	then
+        while [[ "${param[$idparam]}" != "" ]] 
+        do
+                nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam=$(echo "${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam}" == "name" ]] && local name=${valueparam}
+                [[ "${nameparam}" == "vcpus" ]] && local vcpus=${valueparam}
+                [[ "${nameparam}" == "memory" ]] && local memory=${valueparam}
+                [[ "${nameparam}" == "disk_type" ]] && local disk_type=${valueparam}
+                [[ "${nameparam}" == "disk_path" ]] && local disk_path=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "cd_path" ]] && local cd_path=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "enable_screen" ]] && local enable_screen=${valueparam}
+                [[ "${nameparam}" == "bind_usb_ports" ]] && local usb=${valueparam}
+                [[ "${nameparam}" == "os" ]] && local os=${valueparam}
+                [[ "${nameparam}" == "enable_cloudinit" ]] && local cloudinit=${valueparam}
+                [[ "${nameparam}" == "cloudinit_hostname" ]] && local cloudinit_hostname=${valueparam}
+                [[ "${nameparam}" == "cloudinit_userdata" ]] \
+                && local ud=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' ${valueparam}) \
+                && local userdata=$ud   # converting yaml file to one-line yaml
+
+                #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+                ((idparam++))
+        done
+
+        # echo cloudinit_userdata=${userdata}     # debug cloud-init
+
+        # Convert text to boolean
+[[ "${cloudinit}" == "true" ]] && cloudinit="1" || cloudinit="0"
+[[ "${enable_screen}" == "true" ]] && enable_screen="1" || enable_screen="0"
+
+vm_object_create="{\"cloudinit_userdata\":\"${userdata}\",\"cd_path\":\"${cd_path}\",\"os\":\"${os}\",\"enable_cloudinit\":\"${cloudinit}\",\"disk_path\":\"${disk_path}\",\"vcpus\":\"${vcpus}\",\"memory\":\"${memory}\",\"name\":\"${name}\",\"cloudinit_hostname\":\"${cloudinit_hostname}\",\"bind_usb_ports\":[${usb}],\"enable_screen\":\"${enable_screen}\",\"disk_type\":\"${disk_type}\"}"
+
+#echo -e "\nvm_object_create :\n${vm_object_create}\n"  # debug vm_object_create
+fi
+}
+
+modify_vm_variables () {
+        check_vm_param ${@}
+	local idvm="$1"
+        local param=("${@:2}")
+        local idparam=0
+        local nameparam=("")
+        local valueparam=("")
+        vm_object_modif=("")
+        bind_usb=0
+        ci_userdata=0
+
+if [[ ${error} -eq 0 ]]
+then	
+        get_vm_object_var
+        while [[ "${param[$idparam]}" != "" ]] 
+        do
+                nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam=$(echo "${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam}" == "name" ]] && name[$idvm]=${valueparam}
+                [[ "${nameparam}" == "vcpus" ]] && vcpus[$idvm]=${valueparam}
+                [[ "${nameparam}" == "memory" ]] && memory[$idvm]=${valueparam}
+                [[ "${nameparam}" == "disk_type" ]] && disk_type[$idvm]=${valueparam}
+                [[ "${nameparam}" == "disk_path" ]] && disk_path[$idvm]=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "cd_path" ]] && cd_path[$idvm]=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "enable_screen" ]] && enable_screen[$idvm]=${valueparam}
+                [[ "${nameparam}" == "bind_usb_ports" ]] && bind_usb=1 && usb[$idvm]=${valueparam}
+                [[ "${nameparam}" == "os" ]] && os[$idvm]=${valueparam}
+                [[ "${nameparam}" == "enable_cloudinit" ]] && cloudinit[$idvm]=${valueparam}
+                [[ "${nameparam}" == "cloudinit_hostname" ]] && cloudinit_hostname[$idvm]=${valueparam}
+                [[ "${nameparam}" == "cloudinit_userdata" ]] &&  ci_userdata=1 \
+                && local ud=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' ${valueparam}) \
+                && userdata[$idvm]=$ud   # converting yaml file to one-line yaml
+                #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+                ((idparam++))
+        done
+
+# echo cloudinit_userdata=${userdata[$idvm]}     # debug cloud-init
+
+        # Convert text to boolean
+[[ "${cloudinit[$idvm]}" == "true" ]] && cloudinit[$idvm]="1" || cloudinit[$idvm]="0"
+[[ "${enable_screen[$idvm]}" == "true" ]] && enable_screen[$idvm]="1" || enable_screen[$idvm]="0"
+
+        # Update 'bind_usb_ports' and 'cloudinit_userdata' only if it had been specify on cmdline
+if [[ "${bind_usb}" -eq "1" ]]
+
+                        #(usb+userdata) and (usb+no-userdata)
+        then    [[ "${ci_userdata}" -eq "1" ]] \
+                && vm_object_modif[$idvm]="{\"mac\":\"${mac[$idvm]}\",\"cloudinit_userdata\":\"${userdata[$idvm]}\",\"cd_path\":\"${cd_path[$idvm]}\",\"id\":\"${id[$idvm]}\",\"os\":\"${os[$idvm]}\",\"enable_cloudinit\":\"${cloudinit[$idvm]}\",\"disk_path\":\"${disk_path[$idvm]}\",\"vcpus\":\"${vcpus[$idvm]}\",\"memory\":\"${memory[$idvm]}\",\"name\":\"${name[$idvm]}\",\"cloudinit_hostname\":\"${cloudinit_hostname[$idvm]}\",\"status\":\"${state[$idvm]}\",\"bind_usb_ports\":[${usb[$idvm]}],\"enable_screen\":\"${enable_screen[$idvm]}\",\"disk_type\":\"${disk_type[$idvm]}\"}" \
+                || vm_object_modif[$idvm]="{\"mac\":\"${mac[$idvm]}\",\"cd_path\":\"${cd_path[$idvm]}\",\"id\":\"${id[$idvm]}\",\"os\":\"${os[$idvm]}\",\"enable_cloudinit\":\"${cloudinit[$idvm]}\",\"disk_path\":\"${disk_path[$idvm]}\",\"vcpus\":\"${vcpus[$idvm]}\",\"memory\":\"${memory[$idvm]}\",\"name\":\"${name[$idvm]}\",\"cloudinit_hostname\":\"${cloudinit_hostname[$idvm]}\",\"status\":\"${state[$idvm]}\",\"bind_usb_ports\":[${usb[$idvm]}],\"enable_screen\":\"${enable_screen[$idvm]}\",\"disk_type\":\"${disk_type[$idvm]}\"}"
+
+                        #(no-usb+userdata) and  (no-usb+no-userdata)
+        else [[ "${ci_userdata}" -eq "1" ]] \
+                && vm_object_modif[$idvm]="{\"mac\":\"${mac[$idvm]}\",\"cloudinit_userdata\":\"${userdata[$idvm]}\",\"cd_path\":\"${cd_path[$idvm]}\",\"id\":\"${id[$idvm]}\",\"os\":\"${os[$idvm]}\",\"enable_cloudinit\":\"${cloudinit[$idvm]}\",\"disk_path\":\"${disk_path[$idvm]}\",\"vcpus\":\"${vcpus[$idvm]}\",\"memory\":\"${memory[$idvm]}\",\"name\":\"${name[$idvm]}\",\"cloudinit_hostname\":\"${cloudinit_hostname[$idvm]}\",\"status\":\"${state[$idvm]}\",\"enable_screen\":\"${enable_screen[$idvm]}\",\"disk_type\":\"${disk_type[$idvm]}\"}" \
+                || vm_object_modif[$idvm]="{\"mac\":\"${mac[$idvm]}\",\"cd_path\":\"${cd_path[$idvm]}\",\"id\":\"${id[$idvm]}\",\"os\":\"${os[$idvm]}\",\"enable_cloudinit\":\"${cloudinit[$idvm]}\",\"disk_path\":\"${disk_path[$idvm]}\",\"vcpus\":\"${vcpus[$idvm]}\",\"memory\":\"${memory[$idvm]}\",\"name\":\"${name[$idvm]}\",\"cloudinit_hostname\":\"${cloudinit_hostname[$idvm]}\",\"status\":\"${state[$idvm]}\",\"enable_screen\":\"${enable_screen[$idvm]}\",\"disk_type\":\"${disk_type[$idvm]}\"}"
+fi
+fi
+}
+
+param_vm_disk_err () {
+	 error=1 
+	[[ "${action}" == "adddisk" \
+	|| "${action}" == "deldisk" \
+	|| "${action}" == "listdisk" \
+	|| "${action}" == "resizedisk" ]] \
+        && local funct="vm_${action}"
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct=${funct} \
+        || local progfunct=${prog_cmd} 
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="vm_listdisk" \
+        || local listfunct=${list_cmd} 
+
+[[ "${action}" == "adddisk" ]] \
+                && echo -e "\nERROR: ${RED}<param> for '${progfunct}' must be :${norm}\n${BLUE}disk_type=|disk_path=|size=${norm}\n" |tr "|" "\n" \
+                && echo -e "EXAMPLE:\n${BLUE}${progfunct} disk_type=\"qcow2\" disk_path=\"/freeboxdisk/vmdiskpath/myvmdisk.qcow2\" size=\"10737418240\" \n${norm}"\
+		&& echo -e "NOTE: ${RED}you can get a list of all virtuals machines disks, just run: ${norm}\n${BLUE}${listfunct} /path/to/vm/disk/${norm}\n" 
+
+[[ "${action}" == "deldisk"  ]] \
+        && echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|path-to-vmdisk-image\t\t# path to vmdisk image file on freebox storage${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}to get virtuals machines disk image path, just run: ${norm}\n${BLUE}vm_detail <id>${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} /path/to/vm/disk/images/myvm.qcow2 ${norm}\n" 
+
+[[ "${action}" == "listdisk"  ]] \
+        && echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|diskpath\t\t# diskpath must be a a valid path on freebox storage${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}to get virtuals machines disk path, just run: ${norm}\n${BLUE}vm_detail <id>${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} /path/to/vm/disk_images/ ${norm}\n" 
+
+[[ "${action}" == "resizedisk" ]] \
+                && echo -e "\nERROR: ${RED}<param> for '${progfunct}' must be :${norm}\n${BLUE}disk_shrink=|disk_path=|size=${norm}\n" |tr "|" "\n" \
+                && echo -e "EXAMPLE:\n${BLUE}${progfunct} disk_shrink=\"0\" disk_path=\"/freeboxdisk/vmdiskpath/myvmdisk.qcow2\" size=\"10737418240\" \n${norm}"\
+		&& echo -e "NOTE: ${RED}you can get a list of all virtuals machines disks, just run: ${norm}\n${BLUE}${listfunct} /path/to/vm/disk/${norm}\n" 
+#return 1
+}
+
+feeds_vmdisk_variables () {
+if [[ "${action}" == "deldisk" ]] 
+then
+	[[ "$#" -ne 1 ]] \
+	&& param_vm_disk_err \
+	|| disk_path="$(echo -n ${1}|base64 -w0)"	
+fi	
+if [[ "${action}" == "adddisk" || "${action}" == "resizedisk" ]] 
+then
+	[[ "$#" -ne 3 ]] \
+	&& param_vm_disk_err
+fi	
+        local param=("${@}")
+        local idparam=0
+        local nameparam=("")
+        local valueparam=("")
+        vmdisk_object_create=("")
+        vmdisk_object_resize=("")
+
+if [[ "${error}" -eq 0 && "${action}" != "deldisk" ]]
+then
+	while [[ "${param[$idparam]}" != "" ]]
+                do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_type" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_path" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "size" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "disk_shrink" ]] \
+                && param_vm_disk_err && break
+                nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam=$(echo "${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam}" == "disk_type" ]] && disk_type=${valueparam}
+                [[ "${nameparam}" == "disk_path" ]] && disk_path=$(echo -n "${valueparam}"|base64)
+                [[ "${nameparam}" == "size" ]] && size=${valueparam}
+                [[ "${nameparam}" == "disk_shrink" ]] &&  shrink_allow=${valueparam}
+                #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+                ((idparam++))
+        done
+
+        # Convert text to boolean
+[[ "${shrink_allow}" == "true" ]] && shrink_allow="1" || shrink_allow="0"
+
+vmdisk_object_create="{\"disk_path\":\"${disk_path}\",\"size\":\"${size}\",\"disk_type\":\"${disk_type}\"}"
+vmdisk_object_resize="{\"disk_path\":\"${disk_path}\",\"size\":\"${size}\",\"shrink_allow\":\"${shrink_allow}\"}"
+
+#echo -e "\nvmdisk_object_create :\n${vmdisk_object_create}"  # debug vmdisk_object_create
+#echo -e "\nvmdisk_object_resize :\n${vmdisk_object_resize}"  # debug vmdisk_object_resize
+fi
+}
+
+
 list_vm () {
 
         local i=0
         answer=$(call_freebox_api "/vm/$1/")
-        echo -e "\n\t\t\t${WHITE}VIRTUAL MACHINE ID, NAME, MAC AND STATUS : ${norm}\n"
+        echo -e "\t\t\t${WHITE}VIRTUAL MACHINE ID, NAME, MAC AND STATUS : ${norm}"
+	print_term_line 94
         # testing json results to detect a single vm or a list of vm
 	dump_json_keys_values "$answer" |grep -q "result.id"
 	if [[ "$?" == "0" ]]
@@ -3675,8 +3988,65 @@ list_vm () {
                 ((i++))
         	done
 	fi	
-        echo
+        #echo
 }
+
+vm_list () {
+list_vm ${@}
+}	
+
+vm_listdisk () {
+action=listdisk
+error=0
+[[ "$#" -ne "1" ]] && \
+param_vm_disk_err ${@}
+if [[ "$error" != "1" ]]
+	then
+        local dsk_file_path=$(echo -n "$1"|base64)
+        local answer=$(call_freebox_api "/fs/ls/${dsk_file_path}")
+        echo -e "\t\t\t${WHITE}VIRTUAL MACHINE DISK LIST (qcow2, raw, iso, img): ${norm}"
+	print_term_line 106
+	local cache=$(dump_json_keys_values ${answer})
+	local idx=(`echo -e "${cache}"|egrep ].index |cut -d' ' -f3`)
+	local name=(`echo -e "${cache}"|egrep ].name |cut -d' ' -f3`)
+	local size=(`echo -e "${cache}"|egrep ].size |cut -d' ' -f3`)
+	local modification=(`echo -e "${cache}"|egrep ].modification |cut -d' ' -f3`)
+	local mimetype=(`echo -e "${cache}"|egrep ].mimetype |cut -d' ' -f3`)
+
+        local i=0 j=0
+        while [[ "${name[$i]}" != "" ]];
+        do
+                if [[ "${mimetype[$i]}" == "application/x-qemu-disk" ||\
+                      "${mimetype[$i]}" == "application/vnd.freebox.raw-disk-image" ||\
+                      "${mimetype[$i]}" == "application/x-raw-disk-image" ||\
+                      "${mimetype[$i]}" == "application/x-cd-image" ]]
+                then
+                        #echo name=${name[$i]}
+                modification[$i]=$(date "+%Y%m%d-%H:%M:%S" -d@${modification[$i]})
+		       local vszdmp=$(add_freebox_api /vm/disk/info "{\"disk_path\": \"${dsk_file_path}$(echo -n /${name[$i]}|base64)\"}" 2>/dev/null)
+                       local vsize=$(get_json_value_for_key "$vszdmp" "result.virtual_size") 
+                       local sizeprint=""  vsizeprint=""        
+                       [[ "${size[$i]}" -lt "10240" ]] && sizeprint="${size[$i]} B"
+                       [[ "${size[$i]}" -ge "10240" ]] && sizeprint="$((${size[$i]}/1024)) K"
+                       [[ "${size[$i]}" -gt "1048576" ]] && sizeprint="$((${size[$i]}/1048576)) M"
+                       [[ "${size[$i]}" -gt "10737418240" ]]&& sizeprint="$((${size[$i]}/1073741824)) G"
+                       [[ "${vsize}" -lt "10240" ]] && vsizeprint="$((${vsize})) B"
+                       [[ "${vsize}" -ge "10240" ]] && vsizeprint="$((${vsize}/1024)) K"
+                       [[ "${vsize}" -gt "1048576" ]] && vsizeprint="$((${vsize}/1048576)) M"
+                       [[ "${vsize}" -gt "10737418240" ]] && vsizeprint="$((${vsize}/1073741824)) G"
+                       [[ "${vsize}" == "" ]] && vsizeprint="${light_purple_sed}RUNNING"
+                       #echo -e "$j: \t${RED}idx: ${idx[$i]}${norm}  \tname: ${GREEN}${name[$i]}${norm}\tsize: ${PURPL}${sizeprint}${norm}\tvirt: ${PURPL}${vsizeprint}${norm}\t${modification[$i]}${norm}" 
+                       echo -e "$j: \t${RED}idx: ${idx[$i]}${norm}  \tsize: ${PURPL}${sizeprint}${norm}\tvirt: ${PURPL}${vsizeprint}${norm}\t${modification[$i]}${norm}\tname: ${GREEN}${name[$i]}${norm}" 
+                       ((j++))
+                fi
+       ((i++))
+       done
+       export action=''
+       export error=''
+fi       
+}
+
+
 
 
 # NBA : function which pretty print a particular vm of the list
@@ -3720,10 +4090,216 @@ vm_detail () {
                 echo -e "\tenable_cloudinit = ${GREEN}${cloudinit[$idvm]}${norm}" 
                 echo -e "\tcloudinit_hostname = ${GREEN}${cloudinit_hostname[$idvm]}${norm}" 
                 echo -e "\tcloudinit_userdata = ${GREEN}${userdata[$idvm]}${norm}" 
-                echo -e "\tjson_vm_object = ${BLUE}${vm_object_[$idvm]}${norm}\n"
-        fi
 
+		vm_object_modif[$idvm]="{\"mac\":${mac[$idvm]},\"cloudinit_userdata\":${userdata[$idvm]},\"cd_path\":$(echo ${cd_path[$idvm]}|base64 -d),\"id\":${id[$idvm]},\"os\":${os[$idvm]},\"enable_cloudinit\":${cloudinit[$idvm]},\"disk_path\":$(echo ${disk_path[$idvm]}|base64 -d),\"vcpus\":${vcpus[$idvm]},\"memory\":${memory[$idvm]},\"name\":${name[$idvm]},\"cloudinit_hostname\":${cloudinit_hostname[$idvm]},\"status\":${state[$idvm]},\"bind_usb_ports\":${usb[$idvm]},\"enable_screen\":${enable_screen[$idvm]},\"disk_type\":${disk_type[$idvm]}}"
+
+                echo -e "\tjson_vm_object = ${BLUE}${vm_object_modif[$idvm]}${norm}\n"
+        fi
 }
+
+
+#TMP NBA===============================================================
+
+
+
+vm_adddisk  () {
+action=adddisk
+error=0
+	feeds_vmdisk_variables ${@}
+	if [[ "${error}" -eq 0 ]]
+	then
+        	local result=$(add_freebox_api "/vm/disk/create" "${vmdisk_object_create}")
+        	#echo result: ${result}
+        	create_vmdisk_task_id=$(get_json_value_for_key "${result}" result.id)
+        	[ -z "${create_vmdisk_task_id}" ] \
+        	&& echo -e "\nERROR: ${RED}${result}${norm}" \
+        	&& echo -e "${WHITE}${action} task had not been created${norm}\n" \
+        	&& ctrlc \
+        	|| echo -e "\n${PURPL}${action} ${WHITE}task ${norm}${PURPL}#${create_vmdisk_task_id}${norm} ${WHITE}had been sucessfully created. Waiting for ${norm}${PURPL}task #${create_vmdisk_task_id}${norm}${WHITE} to complete...${norm}"
+        	local task_result=
+        	local task_status=
+        	while [[ ${task_result} != "true" ]]; do sleep 1;
+        	        task_status=$(call_freebox_api "/vm/disk/task/$create_vmdisk_task_id") ;
+        	        task_result=$(get_json_value_for_key "${task_status}" result.done)
+        	        echo ${task_status} |grep -q '{"success":true,' >/dev/null \
+        	        && echo -e "${WHITE}task_status: ${norm}${GREEN}${task_status}${norm}" \
+        	        || echo -e "${WHITE}task_status: ${norm}${RED}${task_status}${norm}"
+        	done \
+        	&& local resdel=$(del_freebox_api  "/vm/disk/task/$create_vmdisk_task_id") \
+        	&& echo ${resdel} |grep -q '{"success":true}' >/dev/null \
+        	&& echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${create_vmdisk_task_id}${norm}${WHITE}: ${GREEN}${resdel}${norm} \n" \
+        	|| echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${create_vmdisk_task_id}${norm}${WHITE}: ${RED}${resdel}${norm} \n"
+#wrprogress "Waiting task ${create_vmdisk_task_id}" 1
+	local file=$(echo ${disk_path}|base64 -d|grep -o '[^\/]*$')
+	local path=$(echo ${disk_path}|base64 -d|sed "s/$(echo ${disk_path}|base64 -d|grep -o '[^\/]*$')$//")
+	vm_listdisk ${path} | grep --color=none -E "\---|${file}"
+	fi
+}
+
+vm_resizedisk () {
+action=resizedisk
+error=0
+feeds_vmdisk_variables ${@}
+if [[ "${error}" -eq 0 ]]
+	then
+        local result=$(add_freebox_api "/vm/disk/resize" "${vmdisk_object_resize}")
+        resize_vmdisk_task_id=$(get_json_value_for_key "${result}" result.id 2>/dev/null)
+
+        [ -z "${resize_vmdisk_task_id}" ] \
+        && echo -e "\nERROR: ${RED}${result}${norm}" \
+        && echo -e "${WHITE}${action} task had not been created${norm}\n" \
+        && ctrlc \
+        || echo -e "\n${PURPL}${action} ${WHITE}task ${norm}${PURPL}#${resize_vmdisk_task_id}${norm} ${WHITE}had been sucessfully created. Waiting for ${norm}${PURPL}task #${resize_vmdisk_task_id}${norm}${WHITE} to complete...${norm}"
+        local task_status=
+        local task_result=
+	local spinstr='|/-\'
+        while [[ ${task_result} != "true" ]]; 
+		do sleep 1
+                task_status=$(call_freebox_api "/vm/disk/task/$resize_vmdisk_task_id") ;
+                task_result=$(get_json_value_for_key "${task_status}" result.done)
+                echo ${task_status} |grep -q '{"success":true,' >/dev/null \
+                && echo -e "${WHITE}task_status: ${norm}${GREEN}${task_status}${norm}" \
+		&& while [[ ${task_result} != "true" ]];
+		do 
+			task_status=$(call_freebox_api "/vm/disk/task/$resize_vmdisk_task_id")
+			task_result=$(get_json_value_for_key "${task_status}" result.done)
+			local temp=${spinstr#?}
+        		printf "    [%c]    " "$spinstr"
+        		local spinstr=$temp${spinstr%"$temp"}
+        		sleep .2
+			printf "${WHITE}  resizing disk: $(echo ${disk_path}|base64 -d) ...${norm}\r"
+        		#printf "\b\b\b\b\b\b\b\b\b"
+		done \
+		&& printf "\r" \
+                || echo -e "${WHITE}task_status: ${norm}${RED}${task_status}${norm}"
+        	done \
+        && local resdel=$(del_freebox_api  "/vm/disk/task/$resize_vmdisk_task_id") \
+        && echo ${resdel} |grep -q '{"success":true}' >/dev/null \
+        && echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${resize_vmdisk_task_id}${norm}${WHITE}: ${GREEN}${resdel}${norm} \n" \
+        || echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${resize_vmdisk_task_id}${norm}${WHITE}: ${RED}${resdel}${norm} \n"
+        local file=$(echo ${disk_path}|base64 -d|grep -o '[^\/]*$')
+        local path=$(echo ${disk_path}|base64 -d|sed "s/$(echo ${disk_path}|base64 -d|grep -o '[^\/]*$')$//")
+        vm_listdisk ${path} | grep --color=none -E "\---|${file}"
+fi	
+}	
+
+
+                #&& echo -e "${WHITE}task_status: ${norm}${GREEN}${task_status}${norm}" \
+                #|| echo -e "${WHITE}task_status: ${norm}${RED}${task_status}${norm}"
+vm_deldisk () {
+action=deldisk
+error=0
+feeds_vmdisk_variables ${@}
+if [[ "${error}" -eq 0 ]]
+then	
+        local result=$(add_freebox_api "/fs/rm" "{\"files\":[\"${disk_path}\"]}")
+        local task_id=$(get_json_value_for_key "${result}" result.id)
+
+        [ -z "${task_id}" ] \
+        && echo -e "\nERROR: ${RED}${result}${norm}" \
+        && echo -e "${WHITE}delete task had not been created${norm}\n" \
+        && ctrlc \
+        || echo -e "\n${PURPL}${action} ${WHITE}task ${norm}${PURPL}#${task_id}${norm} ${WHITE}had been sucessfully created. Waiting for ${norm}${PURPL}task #${task_id}${norm}${WHITE} to complete...${norm}"
+        local task_status=
+        local task_result=
+        while [[ ${task_result} != "done" && ${task_result} != "failed" ]]; do sleep 1;
+                task_status=$(call_freebox_api "/fs/tasks/${task_id}") ;
+                task_result=$(get_json_value_for_key "${task_status}" result.state)
+                [[ "${task_result}" != "failed" ]] \
+			&& show_fs_task ${task_id} \
+			|| show_fs_task ${task_id} 
+        done \
+                && local resdel=$(del_freebox_api  "/fs/tasks/$task_id") \
+                && echo ${resdel} |grep -q '{"success":true' >/dev/null \
+                && echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${task_id}${norm}${WHITE}: ${GREEN}${resdel}${norm}" \
+                || echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${task_id}${norm}${WHITE}: ${RED}${resdel}${norm} \n"
+#del_freebox_api  "/fs/tasks/${task_id}" 
+fi
+}
+
+
+
+
+
+
+vm_add () {
+        error=0
+        action=add
+        create_vm_variables ${@}
+if [[ ${error} -eq 0 ]] 
+then
+        local result=$(add_freebox_api "/vm/" "${vm_object_create}")
+        local result_one_line=$(echo  "${result}"|sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')
+        local new_vm_id=$(get_json_value_for_key "${result_one_line}" result.id)
+        [[ "${result}" =~ ^"{\"success\":true" ]] \
+        && echo -e "
+${WHITE}$(vm_detail ${new_vm_id}|sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')${norm}
+${WHITE}VM creation status:${norm} ${GREEN} $(echo -e  "${result}" |grep success |cut -d',' -f-1 |sed 's/true/true\}/')${norm}
+"
+fi
+}
+
+vm_modify () {
+        local idvm="$1" 
+	error=0
+	action=modify
+        modify_vm_variables ${@}
+	if [[ ${error} -eq 0 ]]
+		then
+                echo -e "\n${WHITE}New values for vm ID $idvm :${norm}\n"
+                echo -e "\tname = ${GREEN}${name[$idvm]}${norm}" 
+                echo -e "\tid = ${PURPL}${id[$idvm]}${norm}" 
+                echo -e "\tstatus = ${PURPL}${state[$idvm]}${norm}" 
+                echo -e "\tmemory = ${GREEN}${memory[$idvm]}${norm}" 
+                echo -e "\tvcpus = ${GREEN}${vcpus[$idvm]}${norm}" 
+                echo -e "\tdisk_type = ${GREEN}${disk_type[$idvm]}${norm}" 
+                echo -e "\tdisk_path = ${GREEN}$(echo ${disk_path[$idvm]}|base64 -d)${norm}" 
+                echo -e "\tcd_path = ${GREEN}$(echo ${cd_path[$idvm]}|base64 -d)${norm}" 
+                echo -e "\tmac_address = ${PURPL}${mac[$idvm]}${norm}" 
+                echo -e "\tos = ${GREEN}${os[$idvm]}${norm}" 
+                echo -e "\tenable_screen = ${GREEN}${enable_screen[$idvm]}${norm}"
+                echo -e "\tbind_usb_ports = ${GREEN}${usb[$idvm]}${norm}" 
+                echo -e "\tenable_cloudinit = ${GREEN}${cloudinit[$idvm]}${norm}" 
+                echo -e "\tcloudinit_hostname = ${GREEN}${cloudinit_hostname[$idvm]}${norm}" 
+                [[ "${ci_userdata}" -eq "1" ]] \
+             && echo -e "\tcloudinit_userdata = ${GREEN}${userdata[$idvm]}${norm}" \
+             || echo -e "\tcloudinit_userdata = ${RED}<reset to null>${norm}" 
+                
+	echo -e "\tjson_vm_object_modif = ${BLUE}${vm_object_modif[$idvm]}${norm}"    # debug
+	#echo -e "\tjson_vm_object = ${BLUE}${vm_object_[$idvm]}${norm}\n"    # debug
+	echo -e "
+${WHITE}VM-${idvm} modification status:${norm} $(
+update_freebox_api "/vm/$idvm" "${vm_object_modif[$idvm]}" \
+        |cut -d'"' -f-3 \
+        |sed 's/,/}/g' \
+        |xargs -I "{}" echo -e "$GREEN {} ${norm}";
+        )\n"
+fi
+}
+
+
+
+
+vm_delete () {
+        local id="$1"
+        action=delete
+        error=0
+        check_and_feed_vm_action_param "${@}"
+	if [[ ${error} -eq 0 ]]
+	then
+        local result=$(del_freebox_api "/vm/$id")
+        [[ "${result}" =~ ^"{\"success\":true" ]] \
+&& echo -e "
+${WHITE}VM delete status:${norm} ${GREEN} ${result}
+${norm}" 
+fi
+}
+
+
+
+
+
+#/TMP NBA/===============================================================
 
 
 vm_start () {
@@ -4251,4 +4827,9 @@ _check_freebox_api
 # --> correcting functions behaviour when session expired or not logged (cleaner output) 
 # --> adding support of persistance for websocket connection
 # --> fixing small bugs: output format, unsollicitated shell exit when disconnected or error
+#
+#___________
+# 20240223 
+# --> finished adding support of Virtual Machines => VM full support from library
+# --> fixing small bugs 
 #
