@@ -3778,15 +3778,81 @@ ________________________________________________________________________________
 
 <a name="VM"></a>
 
+API FRONTEND FUNCTIONS - VIRTUAL MACHINE
+-----------------
+You must notice that today, as I had already wrote a 'nearly' complete program for managing Freebox Delta virtual Machines from bash with api and which is also using some of the [LOGIN FUNCTIONS](#LOGIN) and of the [CALL FUNCTIONS](#CALL) of this library (I wrote those function before writing the library new frontend functions), and at the time I was first writing, there were very few functions in this library for managing Freebox Delta Virtual Machines. 
+The 'nearly' complete program to manage Freebox Delta virtual machines from API and bash can be find here: [fbxvm-ctrl](https://github.com/nbanb/fbxvm-ctrl)
+
+Since the whole documentation had been written, the new Freebox ULTRA appears in 2024 and have also VM feature, so I decide to port directly in library all Virtual Machines functions (and more) that I did developp in my other program [fbxvm-ctrl](https://github.com/nbanb/fbxvm-ctrl)   
+
+<br />
+
+**Extended Virtual Machines support in library  :**   
+--> Now the following functions are usable directly from the library (= from the shell).   
+--> Documentation is not updated at the time I'm writing, but all functions include help and example   
+
+**Note :**   
+--> VNC usage over websocket required you install TigerVNC client: https://tigervnc.org/   
+
+
+
+**New :**   
+--> Function auto_relogin on all control VM function (vm_start, sm_stop, vm_console...)   
+--> Fixing websocket timeout while using vm_console or vm_vnc command    
+<br />
+
+**New VM functions supported : (adding vm display screen support)**
+
+| function :| description |
+|:-:|:-:|
+|   |$${\color{red}\text{Calling function with no parameters will print help }}$$|
+|vm_vnc|launch VM VNC screen through Websocket API - (Require option: enable_screen=true)|
+|vm_svnc|start VM and launch VNC screen just after starting VM|
+
+<br />
+
+
+**VM already supported function :**
+
+| function :| description |
+|:-:|:-:|
+|   |$${\color{red}\text{Calling function with no parameters will print help }}$$|
+|vm_add|add a new vm|
+|vm_adddisk|add a new disk for a VM|
+|vm_console|launch VM console (through Freebox Websocket API - it act as an Out-Of-Band access)|
+|vm_deldisk|remove a VM disk|
+|vm_delete|remove a VM|
+|vm_detail|print VM configuration detail and status|
+|vm_list|list all VM|
+|vm_listdisk |list all disks from a vmdisk directory|
+|vm_modify|modify VM parameters|
+|vm_param|print detailed help of ALL VM parameters|
+|vm_reload|execute an ACPI shutdown and after start the VM again|
+|vm_resizedisk|resize vM disk|
+|vm_resource|print allocated and used ressources - json output|
+|vm_restart|hard stop VM (electricaly) and after start the VM again|
+|vm_sconsole|start VM and launch console just after starting VM|
+|vm_show|list a specific VM|
+|vm_shutdown|send an ACPI shutdown command to the VM|
+|vm_start|simply start VM| 
+|vm_stop|hard stop VM (electricaly)|
+
+
+
+<br />
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
+|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
 API FRONTEND FUNCTIONS - VM PREBUILD DISTROS
 -----------------
 
 This API let you list and download Freebox Delta Free's prebuild vm distros
 For this API, we only have 4 functions for listing and downloading  Freebox Delta prebuild vm distros
-
-You must also notice that today, as I had already wrote a complete program for managing Freebox Delta virtual Machines from bash with api and which is also using some of the [LOGIN FUNCTIONS](#LOGIN) and of the [CALL FUNCTIONS](#CALL) of this library (I wrote those function before writing the library new frontend functions), and at the time I'm writing, there is very few functions in this library for managing Freebox Delta Virtual Machines. 
-The goal of the next weeks is to migrate all VM functions from my other program in this library to have a more complete library
-If you need to manage Freebox Delta virtual machines from API and from bash, you can find my Freebox Delta Virtual Machines management program here: [fbxvm-ctrl](https://github.com/nbanb/fbxvm-ctrl)
 
 As I'm never using prebuild VM images that someone other than me had installed, I didn't develop thoses functions in my previously written program [fbxvm-ctrl](https://github.com/nbanb/fbxvm-ctrl). But as some of my program users asked me, I did develop these new frontend functions + downloads capabilities and others frontend functions of this library 
 
