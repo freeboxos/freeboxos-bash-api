@@ -1014,7 +1014,7 @@ login_fbx () {
     #echo answer=$answer
     local challenge=$(get_json_value_for_key "$answer" "result.challenge")
     #echo challenge=$challenge
-    [[ "$(openssl version |cut -d' ' -f2)" != "1.1.1n" ]] && \
+    [[ "$(openssl version |cut -d' ' -f2 |sed s/[a-z]//)" != "1.1.1" ]] && \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^SHA1(stdin)= //') || \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
     #echo password=$password
