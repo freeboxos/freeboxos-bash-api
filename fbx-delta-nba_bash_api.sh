@@ -59,7 +59,7 @@ ITALY="no"
 # here you need to put a strong password used to protect your "app-token" in the session
 # As an example here is the password I'm using to protect my token in the session
 #_APP_PASSWORD="DefineAStrongPasswordM"
-_APP_PASSWORD="NMxKh25Z7kTRv+wWow9M"
+_APP_PASSWORD="NMZ7kTRv+wWow9M"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
 # This option require you add a local domain name and a private certificate 
@@ -67,8 +67,8 @@ _APP_PASSWORD="NMxKh25Z7kTRv+wWow9M"
 # NB: This option MUST be null: "" or commented if you do not use it 
 # NB: Working the same way for ILIADBOX_LAN_URL 
 # As an example to access my box API from my internal LAN domain I set :
-#FREEBOX_LAN_URL="https://fbx.fbx.lan"
-FREEBOX_LAN_URL=""
+FREEBOX_LAN_URL="https://fbx.fbx.lan"
+#FREEBOX_LAN_URL=""
 ILIADBOX_LAN_URL=""
 
 # Freebox WAN URL (optional, will be used if set)
@@ -77,8 +77,9 @@ ILIADBOX_LAN_URL=""
 # NB: This option MUST be null: "" or commented if you do not use it 
 # NB: Working the same way for ILIADBOX_WAN_URL
 # As an example to access my box API from WAN I set :
-#FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
-FREEBOX_WAN_URL=""
+# FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
+FREEBOX_WAN_URL="https://fbx.mydomain.net:2011"
+#FREEBOX_WAN_URL=""
 ILIADBOX_WAN_URL=""
 
 
@@ -93,7 +94,8 @@ ILIADBOX_WAN_URL=""
 # Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so   
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
-FREEBOX_LAN_CACERT=""
+FREEBOX_LAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA4096.pem"
+#FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
 # Public or private CA certificate used for public domain defined in $FREEBOX_WAN_URL: 
@@ -102,7 +104,8 @@ ILIADBOX_LAN_CACERT=""
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
 # for example to access my box API from my WAN domain and my WAN private PKI I set:
 #FREEBOX_WAN_CACERT="/usr/share/ca-certificates/user/my-public-domain-rootCA.pem"
-FREEBOX_WAN_CACERT=""
+FREEBOX_WAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA8192.pem"
+#FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
 
 
@@ -3698,8 +3701,6 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
 
     # DEBUG :  echo ${req[@]} ; # bash -c "${req[@]}"  
        
-    #websocat_session \
-    #&& bash -c "${req[@]} &" \
     bash -c "${req[@]} &" \
     && local wspid=$(pgrep websocat) \
     && vncviewer "${optvnc[@]}"   
@@ -4506,7 +4507,7 @@ vm_modify () {
 	echo -e "
 ${WHITE}VM-${idvm} modification status:${norm} $(
 update_freebox_api "/vm/$idvm" "${vm_object_modif[$idvm]}" \
-        |cut -d'"' -f-3 \
+        |cut -d\" -f-3 \
         |sed 's/,/}/g' \
         |xargs -I "{}" echo -e "$GREEN {} ${norm}";
         )\n"
@@ -4666,6 +4667,88 @@ vm_svnc () {
 
 ###########################################################################################
 ## 
+##  OTHER ACTIONS: library other actions (with simple API call) 
+## 
+###########################################################################################
+
+param_wol_fbx_err () {
+# Print errors for WAKE ON LAN 
+
+error=1
+
+[[ "${action}" == "wol" ]] \
+	&& local funct="${action}_fbx" \
+	&& echo -e "\nERROR: ${RED}<param> for ${funct} must be some of:${norm}${BLUE}|mac=|password=${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to Wake On LAN a machine: ${norm}\n${BLUE}mac= \npassword=  ${norm}\n" \
+&& echo -e "NOTE: ${RED}Wake On LAN password length seems to be 6 char max !${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${funct} mac=\"00:01:02:03:04:05\" password=\"passwd\"${norm}\n" \
+&& echo -e "EXAMPLE (EMPTY PASSWORD...):\n${BLUE}${funct} mac=\"00:01:02:03:04:05\" password=\"\"\n${funct} mac=00:01:02:03:04:05 password=${norm}\n" 
+
+return 1
+}
+
+check_and_feed_wol_param () {
+# Check and feed WAKE ON LAN parameters	
+	local param=("${@}")
+        local mac=""
+        local password=""
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+
+	[[ "$numparam" -ne "2" ]] && param_wol_fbx_err
+        while [[ "${param[$idparam]}" != "" && "${error}" != "1" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "mac" \
+		&& "$(echo ${param[$idparam]}|cut -d= -f1)" != "password" ]] \
+                && param_wol_fbx_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e "${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "mac" ]] && mac=${valueparam[$idparam]}
+                [[ "${nameparam[$idparam]}" == "password" ]] && password=${valueparam[$idparam]}
+        ((idparam++))
+        done
+
+	if [[ "${error}" != "1" ]] 
+	then
+		check_if_mac $mac || param_wol_fbx_err
+	fi
+        # building 'wol_object' json object
+        [[ "${error}" != "1" ]] \
+                && wol_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "\"${nameparam[$idnameparam]}\":\"${valueparam[$idnameparam]}\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
+                || return 1
+
+	#echo wol_object=${wol_object} # debug
+
+}	
+
+wol_fbx () {
+# WAKE ON LAN machine on Freebox LAN	
+        local wakeonlan=""
+        action=wol
+        error=0
+	check_and_feed_wol_param "${@}" 
+	if [[ "${error}" != "1" ]] 
+	then	
+		wakeonlan=$(add_freebox_api /lan/wol/pub/ "${wol_object}" )
+        	#echo -e "${GREEN}${wakeonlan}${norm}"
+        	colorize_output "${wakeonlan}"
+	fi	
+        unset action
+	unset wol_object
+}
+
+
+
+###########################################################################################
+## 
 ##  STATUS FUNCTIONS: library status function (simple API call) AND 'reboot' action
 ## 
 ###########################################################################################
@@ -4675,6 +4758,9 @@ reboot_freebox () {
     # NBA modify for getting reboot status from API 
     #call_freebox_api '/system/reboot' '{}' >/dev/null
     call_freebox_api '/system/reboot' '{}' 
+}
+shutdown_freebox () {
+    call_freebox_api '/system/shutdown' '{}' 
 }
 status_freebox () {
     # NBA add for getting freebox status json from API 
@@ -5136,4 +5222,12 @@ _check_freebox_api
 # 20240408 
 # --> fixing sourcing lib from other directory 
 # --> adding auto_relogin function to some vm action function
+#
+#__________
+#20241014
+# --> adding shutdown function from API v11
+#
+#__________
+#20241016
+# --> adding WOL: Wake On LAN
 #
