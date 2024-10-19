@@ -58,8 +58,7 @@ ITALY="no"
 # Support of auto relogin (necessary for long monitoring tasks)
 # here you need to put a strong password used to protect your "app-token" in the session
 # As an example here is the password I'm using to protect my token in the session
-#_APP_PASSWORD="DefineAStrongPasswordM"
-_APP_PASSWORD="NMZ7kTRv+wWow9M"
+_APP_PASSWORD="DefineAStrongPasswordM"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
 # This option require you add a local domain name and a private certificate 
@@ -67,8 +66,8 @@ _APP_PASSWORD="NMZ7kTRv+wWow9M"
 # NB: This option MUST be null: "" or commented if you do not use it 
 # NB: Working the same way for ILIADBOX_LAN_URL 
 # As an example to access my box API from my internal LAN domain I set :
-FREEBOX_LAN_URL="https://fbx.fbx.lan"
-#FREEBOX_LAN_URL=""
+#FREEBOX_LAN_URL="https://fbx.fbx.lan"
+FREEBOX_LAN_URL=""
 ILIADBOX_LAN_URL=""
 
 # Freebox WAN URL (optional, will be used if set)
@@ -78,8 +77,7 @@ ILIADBOX_LAN_URL=""
 # NB: Working the same way for ILIADBOX_WAN_URL
 # As an example to access my box API from WAN I set :
 # FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
-FREEBOX_WAN_URL="https://fbx.mydomain.net:2011"
-#FREEBOX_WAN_URL=""
+FREEBOX_WAN_URL=""
 ILIADBOX_WAN_URL=""
 
 
@@ -94,8 +92,7 @@ ILIADBOX_WAN_URL=""
 # Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so   
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
-FREEBOX_LAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA4096.pem"
-#FREEBOX_LAN_CACERT=""
+FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
 # Public or private CA certificate used for public domain defined in $FREEBOX_WAN_URL: 
@@ -104,8 +101,7 @@ ILIADBOX_LAN_CACERT=""
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
 # for example to access my box API from my WAN domain and my WAN private PKI I set:
 #FREEBOX_WAN_CACERT="/usr/share/ca-certificates/user/my-public-domain-rootCA.pem"
-FREEBOX_WAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA8192.pem"
-#FREEBOX_WAN_CACERT=""
+FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
 
 
@@ -2788,6 +2784,13 @@ check_if_rfc1918 () {
 	|| return 1
 }
 
+# testing if *domain* is a domain name : 
+check_if_domain () { 
+	local domain="${1}"
+        [[ ${domain} =~ ^([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+        || return 1
+}
+
 
 ######## match debug ##########
 #[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] && echo match-mac-and="$?"
@@ -4665,6 +4668,241 @@ vm_svnc () {
 
 
 
+
+###########################################################################################
+## 
+##  DOMAIN MANAGEMET FUNCTIONS: library domain management functions (list, add, del,...) 
+## 
+###########################################################################################
+
+list_domain () {
+# This function is listing freebox domain
+# WARNING : THIS API IS NOT DOCUMENTED !
+
+local iddom=0
+local domain=("")
+answer=$(get_freebox_api domain/config)
+local default_domain=$(get_json_value_for_key "$answer" result.default_domain)
+local def_dom="$default_domain"
+answer=$(get_freebox_api "/domain/owned/")
+        echo -e "\t\t\t${WHITE}DOMAIN ID, TYPE, OWNER, CERTIFICAT DAYS LEFT ${norm}"
+        print_term_line 110 
+
+# testing json results to detect a single domain or a list of domains
+dump_json_keys_values "$answer" |grep -q "result.id"
+if [[ "$?" == "0" ]]
+then
+	# caching results
+	dump_json_keys_values "$answer" >/dev/null
+	local display_name="domain id "
+	local id=$(get_json_value_for_key "$answer" "result.id")
+        local type=$(get_json_value_for_key "$answer" "result.type")
+        local owner=$(get_json_value_for_key "$answer" "result.owner")
+        local certs=$(get_json_value_for_key "$answer" "result.certs")
+	local certs_rsa_status=$(get_json_value_for_key "$answer" "result.certs.rsa.status")
+	local certs_ec_status=$(get_json_value_for_key "$answer" "result.certs.ec.status")
+	[[ "$certs_rsa_status" == "issued" ]] \
+	&& local certs_rsa_valid=$(get_json_value_for_key "$answer" "result.certs.rsa.days_left") \
+	|| local certs_rsa_valid="${RED}none" 
+	[[ "$certs_ec_status" == "issued" ]] \
+	&& local certs_ec_valid=$(get_json_value_for_key "$answer" "result.certs.ec.days_left") \
+	|| local certs_ec_valid="${RED}none"
+ 	[[ "${id}" == "${default_domain}" ]] && display_name="id ${GREEN}default" 
+	[[ "${certs}" == '{}' ]] \
+                && echo -e "${PURPL}DOMAIN-${iddom}:\t${WHITE}owner: ${BLUE}${owner}${norm}\t${WHITE}type:${norm} ${BLUE}${type}${norm}\t${WHITE}rsa:${norm} ${RED}${certs_rsa_valid}${norm} \t${WHITE}ecdsa:${norm} ${RED}${certs_ec_valid}${norm}\t${WHITE}${display_name}:${norm} ${RED}${id}${norm} " \
+                || echo -e "${BLUE}DOMAIN-${iddom}:\t${WHITE}owner: ${GREEN}${owner}${norm}\t${WHITE}type:${norm} ${GREEN}${type}${norm}\t${WHITE}rsa:${norm} ${GREEN}${certs_rsa_valid}${norm} \t${WHITE}ecdsa:${norm} ${GREEN}${certs_ec_valid}${norm}\t${WHITE}${display_name}:${norm} ${light_purple_sed}${id}${norm} " 
+	
+
+else	
+	# caching results
+	dump_json_keys_values "$answer" >/dev/null
+	while [[ $(get_json_value_for_key "$answer" "result[$iddom].id") != "" ]] 
+        do
+	local display_name="domain id "
+        local id[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].id")
+        local type[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].type")
+        local owner[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].owner")
+        local certs[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs")
+        local certs_rsa_status[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs.rsa.status")
+        local certs_ec_status[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs.ec.status")
+        [[ "${certs_rsa_status[$iddom]}" == "issued" ]] \
+	&& local certs_rsa_valid[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs.rsa.days_left") \
+	|| local certs_rsa_valid[$iddom]="${RED}none"
+        [[ "${certs_ec_status[$iddom]}" == "issued" ]] \
+        && local certs_ec_valid[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs.ec.days_left") \
+        || local certs_ec_valid[$iddom]="${RED}none" 
+	[[ "${id[$iddom]}" == "${default_domain}" ]] && display_name="id ${GREEN}default"
+	[[ "${id[$iddom]}" == "${default_domain}" ]] && display_name="id ${GREEN}default"
+        [[ "${certs[$iddom]}" == '{}' ]] \
+                && echo -e "${PURPL}DOMAIN-${iddom}:\t${WHITE}owner: ${BLUE}${owner[$iddom]}${norm}\t${WHITE}type:${norm} ${BLUE}${type[$iddom]}${norm}\t${WHITE}rsa:${norm} ${RED}${certs_rsa_valid[$iddom]}${norm} \t${WHITE}ecdsa:${norm} ${RED}${certs_ec_valid[$iddom]}${norm}\t${WHITE}${display_name}:${norm} ${RED}${id[$iddom]}${norm} " \
+                || echo -e "${BLUE}DOMAIN-${iddom}:\t${WHITE}owner: ${GREEN}${owner[$iddom]}${norm}\t${WHITE}type:${norm} ${GREEN}${type[$iddom]}${norm}\t${WHITE}rsa:${norm} ${GREEN}${certs_rsa_valid[$iddom]}${norm} \t${WHITE}ecdsa:${norm} ${GREEN}${certs_ec_valid[$iddom]}${norm}\t${WHITE}${display_name}:${norm} ${light_purple_sed}${id[$iddom]}${norm} " 
+
+                ((iddom++))
+                done
+fi
+}
+
+domain_list () {
+auto_relogin && list_domain
+}
+
+
+param_dom_fbx_err () {
+
+        error=1
+
+        [[ "${action}" == "add" \
+        || "${action}" == "del" \
+        || "${action}" == "addcert" \
+	|| "${action}" == "setdefault" ]] \
+	&& local funct="domain_${action}"
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct=${funct} \
+        || local progfunct=${prog_cmd} 
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="domain_list" \
+        || local listfunct=${list_cmd} 
+	
+	
+[[ "${action}" == "add" \
+        || "${action}" == "del" \
+	|| "${action}" == "setdefault" ]] \
+	&& echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a domain name (use 'check_if_domain' to test)${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}you can get a list of all configured domain and status (showing all 'id'), just run: ${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} id="my.domain.com" ${norm}" 
+
+
+[[ "${action}" == "addcert" ]] \
+&& echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a domain name|key_type\t\t# key_type is 'ed' or 'rsa'|cert_pem\t\t# path to file containing your certificat in PEM format|key_pem\t\t\t# path to file containing your certificat PRIVATE KEY in PEM format|intermediates\t\t# path to file containing your root or intermediate CA certificat in PEM format${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}you can get a list of all configured domain and status (showing all 'id'), just run: ${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "NOTE: ${RED}your certificate files (+ intermediate) files must contains: ${norm}\n${BLUE}-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n${RED}AND for key PEM files:\n${BLUE}-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----${norm}\n" \
+&& echo -e "EXAMPLE (PEM files are stored in current directory):\n${BLUE}${progfunct} id=\"my.domain.com\" key_type=\"ec\" cert_pem=\"mycert.pem\" key_pem=\"mykey.pem\" intermediates=\"myintermediateCA.pem\"  ${norm}\n"  \
+&& echo -e "EXAMPLE (PEM files are stored in CERT/ directory):\n${BLUE}${progfunct} id=\"my.domain.com\" key_type=\"ec\" cert_pem=\"CERT/mycert.pem\" key_pem=\"CERT/mykey.pem\" intermediates=\"CERT/myintermediateCA.pem\"  ${norm}" 
+
+ctrlc
+}
+
+check_and_feed_domain_param () {
+        local param=("${@}")
+        local nameparam=("")
+        local valueparam=("")  
+	local numparam="$#"
+	local idparam="0"
+        local action=${action}
+        error=0
+
+if [[ "${action}" == "add" || "${action}" == "del" || "${action}" == "setdefault" ]]
+then
+	[[ "$numparam" -ne 1 ]] \
+		&& param_dom_fbx_err
+	
+	[[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "id" ]] \
+		&& param_dom_fbx_err
+			
+	dom_id=$(echo ${param[$idparam]}|cut -d= -f2)
+	#[[ ${dom_id} =~ ^([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+	#	|| param_dom_fbx_err
+	check_if_domain ${dom_id}  || param_dom_fbx_err
+
+	dom_json_object="{\"id\":\"${dom_id}\"}"	
+fi
+
+if [[ "${action}" == "addcert" ]]
+then
+[[ "$numparam" -ne "5" ]] && param_dom_fbx_err
+while [[ "${param[$idparam]}" != "" ]] 
+        do
+	[[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "id" \
+        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "key_type" \
+        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cert_pem" \
+        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "key_pem" \
+        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "intermediates" ]] \
+        && param_dom_fbx_err && break
+        nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+        valueparam=$(echo "${param[$idparam]}"|cut -d= -f2-)
+        [[ "${nameparam}" == "id" ]] && local id=${valueparam}
+        [[ "${nameparam}" == "key_type" ]] && local key_type=${valueparam}
+        [[ "${nameparam}" == "cert_pem" ]] \
+	&& local cert_p=$(sed '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/!d' \
+        ${valueparam} | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g') \
+	&& local cert_pem=${cert_p}
+        [[ "${nameparam}" == "key_pem" ]] \
+	&& local key_p=$(sed '/----BEGIN PRIVATE KEY-----/,/-----END PRIVATE KEY-----/!d' \
+        ${valueparam} | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g') \
+	&& local key_pem=${key_p}
+        [[ "${nameparam}" == "intermediates" ]] \
+	&& local inter=$(sed '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/!d' \
+       	${valueparam} |	sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g') \
+	&& local intermediates=${inter}
+
+        #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+        ((idparam++))
+done
+
+#[[ ${id} =~ ^([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+			#|| param_dom_fbx_err
+check_if_domain ${id}  || param_dom_fbx_err
+
+[[ ${key_type} != "rsa" || ${key_type} != "ec" ]] \
+                || param_dom_fbx_err
+
+dom_id=${id} 
+domcrt_json_object="{\"key_type\":\"${key_type}\",\"cert_pem\":\"${cert_pem}\",\"key_pem\":\"${key_pem}\",\"intermediates\":\"${intermediates}\"}"
+
+#echo -e "\ndomcrt_json_object :" ; echo "${domcrt_json_object}" >>./domcrt_json_object # debug domcrt_json_object
+fi	
+
+}
+
+domain_add () {
+	action=add
+	error=0
+	check_and_feed_domain_param "${@}" 
+        auto_relogin 
+	[[ "${error}" != "1" ]] && \
+	local adddomain=$(add_freebox_api "domain/owned/" "${dom_json_object}")
+	colorize_output ${adddomain}
+	unset action dom_id dom_json_object 
+}
+
+domain_del () {
+        action=del
+        error=0
+        check_and_feed_domain_param "${@}"
+        auto_relogin  
+        [[ "${error}" != "1" ]] && \
+        local deldomain=$(del_freebox_api "domain/owned/${dom_id}")
+        colorize_output ${deldomain}
+        unset action dom_id dom_json_object 
+}
+
+domain_setdefault () {
+        action=setdefault
+        error=0
+        check_and_feed_domain_param "${@}"
+        auto_relogin  
+        [[ "${error}" != "1" ]] && \
+        local setdefaultdomain=$(update_freebox_api "domain/config" "{\"default_domain\":\"${dom_id}\"}")
+        colorize_output ${setdefaultdomain}
+        unset action dom_id dom_json_object 
+}
+
+
+domain_addcert () {
+	action=addcert
+	error=0
+	check_and_feed_domain_param "${@}" 
+        auto_relogin 
+	[[ "${error}" != "1" ]] && \
+	local addcert=$(add_freebox_api "domain/owned/${dom_id}/import_cert/" "${domcrt_json_object}")
+	colorize_output ${addcert}
+	unset action dom_id domcrt_json_object 
+}
+
+
+
+
 ###########################################################################################
 ## 
 ##  OTHER ACTIONS: library other actions (with simple API call) 
@@ -4730,11 +4968,12 @@ check_and_feed_wol_param () {
 }	
 
 wol_fbx () {
-# WAKE ON LAN machine on Freebox LAN	
+# WAKE ON LAN machine on Freebox LAN - need freebox access right: "freebox configuration change"
         local wakeonlan=""
         action=wol
         error=0
 	check_and_feed_wol_param "${@}" 
+	auto_relogin
 	if [[ "${error}" != "1" ]] 
 	then	
 		wakeonlan=$(add_freebox_api /lan/wol/pub/ "${wol_object}" )
@@ -5230,4 +5469,16 @@ _check_freebox_api
 #__________
 #20241016
 # --> adding WOL: Wake On LAN
+#
+#__________
+#20241017
+# --> adding 'auto_relogin' capability to Wake On LAN function
+# --> adding 'domain_list' function to list freebox domain name
+# --> adding personnal domain support (NOT DOCUMENTED !) : add domain, del domain, setdefault 
+# --> adding certificates for personnal domains from PEM files
+#
+#__________
+#20241018
+#--> adding 'check_if_domain' function to check if a domain name 
+#
 #
