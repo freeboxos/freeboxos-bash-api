@@ -58,6 +58,7 @@ Table of Contents:
 |frontend| Functions for managing filesystem tasks | [FILESYSTEM TASK FUNCTIONS](#FSTSK) |
 |frontend| Functions for managing filesystem operations | [FILESYSTEM OPERATION FUNCTIONS](#FSOP) |
 |frontend VM| Functions for managing VM | [VIRTUAL MACHINES FUNCTIONS](#VM) |
+|frontend| Functions for managing DOMAIN NAME | [DOMAIN NAME FUNCTIONS](#DOMAIN) |
 |frontend| Functions for formatting API reply of frontend functions | [API REPLY OUTPUT](#REPLY) |
 |core| Functions for making direct actions on box from API | [API ACTIONS](#ACTIONS) |
 
@@ -4171,6 +4172,196 @@ ________________________________________________________________________________
 
 __________________________________________________________________________________________
 
+
+<br />
+
+<a name="DOMAIN"></a>   
+
+
+
+API FRONTEND FUNCTIONS - DOMAIN NAME
+-----------------
+You must notice that today, this API is not documented.
+As describes in the Freebox developper documentation, NOT DOCUMENTED API MUST NOT BE USED ! 
+
+But as it's a mess to go to FreeboxOS web interface to define domains and upload certificates, I decide to implement this functionnality.
+At the time I'm writing (end of 2024), it's working well, but please $${\color{red}\text{USE AT YOUR OWN RISK }}$$
+
+
+
+<br />
+
+**Note :**   
+NOT DOCUMENTED API MUST NOT BE USED ! 
+
+
+**New :**   
+--> Function domain_setdefault let you define Freebox default domain name    
+--> listing domain name support auto_relogin   
+<br />
+
+
+**New DOMAIN functions supported :**   
+
+| function :| description |
+|:-:|:-:|
+|   |$${\color{red}\text{Calling function with no parameters will print help }}$$|
+|domain_list|list Freebox configured domain |
+|domain_add|add a new domain name on Freebox|
+|domain_del|delete a configured domain name on Freebox|
+|domain_addcert|add a TLS certificat to a Freebox configured domain|
+|domain_setdefault|set Freebox default domain name (used for remote acceess)|
+
+<br />
+
+
+-------------------------------------------------------------------------------
+
+#### *  domain_list
+This function will simply retrieve the list of domains configured  
+
+##### Example
+```bash  
+domain_list
+```  
+
+```bash
+			DOMAIN ID, TYPE, OWNER, CERTIFICAT DAYS LEFT 
+--------------------------------------------------------------------------------------------------------------
+DOMAIN-0:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : sba.xxxxxxx.net 
+DOMAIN-1:	owner: user	type: custom	rsa: 105 	ecdsa: none	domain id : 14rv.xxxxxxx.net 
+DOMAIN-2:	owner: user	type: custom	rsa: 59 	ecdsa: none	domain id : fbx.fbx.lan 
+DOMAIN-3:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : test.14rv.lan 
+DOMAIN-4:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : 14rv-fbx.fbx.lan 
+DOMAIN-5:	owner: user	type: custom	rsa: 80 	ecdsa: none	domain id : fbx.my-public-domain.net 
+DOMAIN-6:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : home.xxxxxxx.net 
+DOMAIN-7:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : test.xxxxxxx.lan 
+DOMAIN-8:	owner: freebox	type: auto	rsa: 57 	ecdsa: 57	domain id : xxxxxxx.fbxos.fr 
+DOMAIN-9:	owner: user	type: custom	rsa: none 	ecdsa: 105	id default: fbx.xxxxxxx.net 
+DOMAIN-10:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : lba.xxxxxxx.net 
+DOMAIN-11:	owner: user	type: custom	rsa: none 	ecdsa: 105	domain id : fbx.14rv.lan 
+DOMAIN-12:	owner: user	type: custom	rsa: none 	ecdsa: none	domain id : test.com 
+
+```
+
+##### Picture
+![Capture d’écran du 2024-10-19 12-29-47](https://github.com/user-attachments/assets/178d2c7d-cc47-4703-ad8c-06ff3c8be105)
+
+
+-------------------------------------------------------------------------------
+
+
+#### *  domain_add
+This function will simply retrieve the list of domains configured  
+
+##### Example
+```bash  
+domain_add
+```  
+
+```bash
+ERROR: <param> must be :
+id			# id must be a domain name
+
+NOTE: you can get a list of all configured domain and status (showing all 'id'), just run: 
+domain_list
+
+EXAMPLE:
+domain_add id=my.domain.com 
+
+```  
+
+##### Picture
+![image](https://github.com/user-attachments/assets/bbf9b13b-ee52-45ef-abc9-b2666fc7d318)
+
+
+```bash  
+domain_add id=test.fbx.lan
+```  
+
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"id":"test.fbx.lan","type":"custom","certs":{},"owner":"user"}
+
+```  
+##### Picture
+![image](https://github.com/user-attachments/assets/d0e7db8c-2584-47ee-b5a0-4f7b930823ae)
+
+
+
+-------------------------------------------------------------------------------
+
+
+#### *  domain_addcert
+This function will simply retrieve the list of domains configured  
+
+##### Example
+```bash  
+domain_addcert
+```  
+
+```bash
+
+ERROR: <param> must be :
+id			# id must be a domain name
+key_type		# key_type is 'ed' or 'rsa'
+cert_pem		# path to file containing your certificat in PEM format
+key_pem			# path to file containing your certificat PRIVATE KEY in PEM format
+intermediates		# path to file containing your root or intermediate CA certificat in PEM format
+
+NOTE: you can get a list of all configured domain and status (showing all 'id'), just run: 
+domain_list
+
+NOTE: your certificate files (+ intermediate) files must contains: 
+-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----
+AND for key PEM files:
+-----BEGIN PRIVATE KEY-----
+-----END PRIVATE KEY-----
+
+EXAMPLE (PEM files are stored in current directory):
+domain_addcert id="my.domain.com" key_type="ec" cert_pem="mycert.pem" key_pem="mykey.pem" intermediates="myintermediateCA.pem"  
+
+EXAMPLE (PEM files are stored in CERT/ directory):
+domain_addcert id="my.domain.com" key_type="ec" cert_pem="CERT/mycert.pem" key_pem="CERT/mykey.pem" intermediates="CERT/myintermediateCA.pem"  
+
+
+```  
+
+##### Picture
+![image](https://github.com/user-attachments/assets/124fa735-8b1b-4c5c-b1bd-424c99f46fa4)
+
+
+```bash  
+domain_addcert id=test.fbx.lan key_type=ec cert_pem=CERT/14rv-RSA8192_2023-crt.pem key_pem=CERT/14rv-RSA8192_2023-key.pem intermediates=CERT/14rv-rootCA-RSA8192.pem 
+```  
+
+```bash
+
+operation completed: 
+{"success":true}
+
+```  
+##### Picture
+![image](https://github.com/user-attachments/assets/f991038e-03b9-400c-b7e3-9edcda4dcd7a)
+
+
+
+<br />
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
+|:-:|:-:|:-:|:-:|
+
+
+
+__________________________________________________________________________________________
+
+<br />
 <a name="REPLY"></a>
 
 API FRONTEND FUNCTIONS - REPLY OUTPUT 
