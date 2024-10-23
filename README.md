@@ -126,7 +126,7 @@ $${\color{red}\text{To use this library you must install (at least) curl + opens
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ___________________________________________________________________________________________
@@ -193,7 +193,7 @@ free_fra
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ______________________________________________________________________________________
@@ -279,7 +279,7 @@ $ reboot_freebox
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -463,7 +463,7 @@ source fbx-delta-nba_bash_api.sh
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 _____________________________________________________________________________________________
@@ -535,7 +535,7 @@ MY_APP_TOKEN="I7Sj+jpquj0rnPVSjLokXhy3gglOZflOQDTxjA8Vxdbma/VtoRwhR/nIluBuG8Wt"
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 
@@ -619,7 +619,7 @@ auto_relogin
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -824,7 +824,7 @@ $ echo $?
 ```
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -880,7 +880,7 @@ Result :
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -999,7 +999,7 @@ echo $?
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -1016,7 +1016,7 @@ ________________________________________________________________________________
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
@@ -1605,7 +1605,7 @@ Download Task log: task 335
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -1731,7 +1731,7 @@ Sucessfully delete task #475: {"success":true}
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -1784,7 +1784,7 @@ Done:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -2075,7 +2075,7 @@ operation completed:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -2327,7 +2327,7 @@ operation completed:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -2737,7 +2737,7 @@ Impossible de supprimer la redirection : Entrée non trouvée: noent
  
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -2780,7 +2780,7 @@ When using this API, you will have to manage 'filesystem tasks' for one hand and
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -3176,7 +3176,7 @@ No filesystem tasks to list !
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -4069,7 +4069,7 @@ idx: 3		file	20230114-18:01:34	size: 2 GB	name: njd-efi-arm64.qcow2
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -4142,7 +4142,7 @@ Since the whole documentation had been written, the new Freebox ULTRA appears in
 <br />
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -4464,7 +4464,7 @@ idx: 2		file	20230113-09:15:05	size: 2 GB	name: MyDeltaJeeDom.qcow2
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
@@ -4693,7 +4693,7 @@ operation completed:
 <br />
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 
@@ -4789,7 +4789,7 @@ REPEATER-1:  id: 1  ip: 192.168.100.89  mac: 8C:97:EA:55:BB:B6  model: fbxwmr-r1
 <br />
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 
@@ -4977,7 +4977,7 @@ list_dhcp_static_lease | sed '/00:01:02:03:04:05/!d'
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
@@ -5055,7 +5055,7 @@ operation completed:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
@@ -5088,7 +5088,7 @@ See the following capture:
 ![fbx-app-axx](https://user-images.githubusercontent.com/13208359/211077203-039cdce8-b617-48ba-b612-b5a57d497bd5.png)
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 ___________________________________________________________________________________________
 
@@ -5119,7 +5119,7 @@ fbx         IN        A       82.82.82.82
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
@@ -5139,7 +5139,7 @@ Once you have your public URL pointing to your Freebox and a valid TLS certifica
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 -------------------------------------------------------------------------------
@@ -5172,7 +5172,7 @@ Allow remote access to your box:
 Now you're ready to configure your domain name URL and TLS certificate 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 
@@ -5231,7 +5231,7 @@ And now, verify your BOX's configuration is fine:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
@@ -5272,7 +5272,7 @@ When you're connected, select your box tab (in France "Ma Freebox", maybe "My Il
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
 
 ___________________________________________________________________________________________
