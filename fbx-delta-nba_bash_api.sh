@@ -7,7 +7,7 @@
 ##_________________________________________________________________________________________
 ##
 ## 
-##   THIS BASH LIBRARY (from 2013 to 2023):
+##   THIS BASH LIBRARY (from 2013 to 2024):
 ##           => allow you to call all HTTPS & WEBSOCKET API on Freebox / Iliadbox 
 ##           => provide all backend function for calling API, login...
 ##           => was designed first for Virtual Machines management on Freebox Delta
@@ -327,7 +327,7 @@ unset CAbdl is_cert
 # ${list_cmd}  --> global - name of listing command of frontend program which source this lib
 # ex : prog_cmd="fbxvm-ctrl add dhcp"  listcmd="fbxvm-ctrl list dhcp"
 # => output of function param_dhcp_err will say : 
-# error in "fbxvm-ctrl add dhcp" instead of error in "param_download_err"
+# error in "fbxvm-ctrl add dhcp" instead of error in "param_dhcp_err"
 
 
 ###########################################################################################
@@ -397,6 +397,51 @@ _LIB_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 ###########################################################################################
 ## 
+## LIBRARY PARAMETERS :  Source with help OR list action  
+## 
+###########################################################################################
+
+
+######## LIBRARY FUNCTION HELP ########
+first_param="${1}"
+if [[ "${first_param}" == "-h" || "${first_param}" == "--h"  || "${first_param}" == "-help" || "${first_param}" == "--help" || "${first_param}" == "h" || "${first_param}" == "help" ]]
+        then
+		echo -e "\n${RED}To source all library functions source without parameters (standard use):${WHITE}\nExample: \n\t source ${BASH_SOURCE[0]} ${norm}"
+        	echo -e "\n${RED}Sourcing library with 'help' or 'list' parameters DOES NOT source library ! ${norm}"
+                echo -e "${WHITE}Parameters:\n\t  -h,--h,help,-help,--help\t- print this help${norm}"
+                echo -e "${WHITE}\t  -l,--l,list,-list,--list\t- print a list of all functions of the library${norm}"
+                echo -e "${WHITE}Example: \n\t  source ${BASH_SOURCE[0]} --help"
+                echo -e "\t  source ${BASH_SOURCE[0]} --list "
+                echo -e "\n${light_purple_sed}HELP: "
+                echo -e "\t  - To get help and example, please read the attached ${RED}README.md ${light_purple_sed}file or the code"
+		echo -e "\t  - All frontend functions have their embedded help (run function with no parameters)\n\t${WHITE}    Example: \n\t    source ./fbx-delta-nba_bash_api.sh\n\t    login_freebox \"\$MY_APP_ID\" \"\$MY_APP_TOKEN\" && add_dhcp_static_lease"
+                echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh ${norm}"
+                echo -e "\n${light_purple_sed}SUPPORT: \n\t  - Support is availiable @ GitHub.com "
+                echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new${norm}"
+		ctrlc
+fi
+
+######## LIBRARY FUNCTION LISTING ########
+if [[ "${first_param}" == "-l" || "${first_param}" == "--l"  || "${first_param}" == "-list" || "${first_param}" == "--list" || "${first_param}" == "list" ]]
+then
+	echo -e "\n${RED}${BASH_SOURCE[0]/\.\//} functions listing on:${WHITE} $(date +%Y-%m-%d)\n"
+	grep "() {" ${BASH_SOURCE[0]} | grep -Ev '^#|grep'| cut -d' ' -f-1 \
+		| sort \
+		|awk '{ORS=(NR%3?FS:RS); print $1}' \
+		| column -t	
+        echo -e "\n${RED}Sourcing library with 'list' parameters DOES NOT source library functions ! \n\nTo source all library functions source without parameters:${WHITE}\nExample: \n\t source ${BASH_SOURCE[0]} ${norm}\n"
+        echo -e "\n${light_purple_sed}FUNCTIONS HELP: "
+        echo -e "\t  - To get help and example, please read the attached ${RED}README.md ${light_purple_sed}file or the code"
+	echo -e "\t  - All frontend functions have their embedded help (run function with no parameters)\n\t${WHITE}    Example: \n\t    source ./fbx-delta-nba_bash_api.sh\n\t    login_freebox \"\$MY_APP_ID\" \"\$MY_APP_TOKEN\" && add_dhcp_static_lease"
+        echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh ${norm}"
+        echo -e "\n${light_purple_sed}SUPPORT: \n\t  - Support is availiable @ GitHub.com "
+        echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new${norm}"
+	ctrlc
+fi	
+
+
+###########################################################################################
+## 
 ## FUNCTIONS: Underlying and global function used by fbx-delta-nba_bash_api.sh library 
 ## 
 ###########################################################################################
@@ -406,7 +451,7 @@ _LIB_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 ######## EXIT FUNTCION STACK WITHOUT KILLING BASH SHELL - replace exit() ########
 # Function which stand like CTRL+C to exit the bash stack
-ctrlc() {
+ctrlc () {
 kill -INT $$ 
 } 	
 
@@ -496,6 +541,12 @@ return 0
 check_tool () {
 bash -c "source ${BASH_SOURCE[0]} && check_tool_exit $1"
 }
+
+check_tool_jq () {
+# It is recommanded you install 'jq' https://jqlang.github.io/jq/ 
+	JQ=$(which jq)
+} 
+check_tool_jq	
 
 ####### NBA PRINT TERMINAL LINE #######
 # terminal dash line (---) autoscale from terminal width or forced width by parameter
@@ -693,25 +744,8 @@ _parse_and_cache_json () {
     fi
 }
 
-get_json_value_for_key2 () {
-    _parse_and_cache_json "$1"
-    local key i=1 max_index=${#_JSON_DECODE_DATA_KEYS[@]};
-   # local _JSON_NBA=("\"${_JSON_DECODE_DATA_KEYS[@]}\" = \"${_JSON_DECODE_DATA_VALUES[@]}\"")
-    #echo -e "${_JSON_NBA[@]}"
-    local chk="${2//\[/\\\[}"
-    chk="${chk//\]/\\\]}"
-    #echo $chk
-    echo -e "${_JSON_NBA[@]}"  |egrep ${chk}|cut -d= -f2-
-}
-
-
-
 
 get_json_value_for_key () {
-   # if [[ -x /usr/bin/jq ]]
-   # then
-   #         echo ${1} | jq -r ..${2} 
-   # else
     _parse_and_cache_json "$1"
     local key i=1 max_index=${#_JSON_DECODE_DATA_KEYS[@]};
     while [[ $i -lt $max_index ]]; do
@@ -722,12 +756,14 @@ get_json_value_for_key () {
     ((i++))
     done
     return 1
-    #fi
 }
 
-#get_json_value_for_key () {
-#echo ${1} | jq -r .${2}
-#}
+get_json_value_for_key_jq () {
+if [[ -x $JQ ]]
+then
+	jq -rc ."${2}" <<< "${1}" | sed 's/null//g'
+fi
+}
 
 dump_json_keys_values () {
     _parse_and_cache_json "$1"
@@ -738,9 +774,13 @@ dump_json_keys_values () {
     done
 }
 
-#dump_json_keys_values () {
-#echo ${1} | jq -rn "result[] | try keys[]"
-#}
+dump_json_keys_values_jq () {
+# see https://stackoverflow.com/questions/79115246/dump-all-key-pair-of-a-json-with-jq
+if [[ -x $JQ ]]
+then
+jq  -rc 'def f($p): f($p + (getpath($p) | iterables | keys_unsorted[] |[.])),"\([$p[] | "." + strings // "[\(.)]"] | add[1:] | values) = \(getpath($p))";f([])'  <<< "${1}"     
+fi
+}
 
 
 # NBA: Original _check_success function: too slow
@@ -954,11 +994,9 @@ add_freebox_api () {
     answer=$(curl -s "$url" "${options[@]}")
     if [[ ${action} == "listdisk" ]] 
     then 
-	    #_check_success "$answer"
             _check_success "${answer}"
     else
     	    #_check_success "$answer" || return 1
-    	    #_check_success "$answer" || ctrlc
             _check_success "${answer}" || ctrlc
     fi
     #echo "$answer"
@@ -1085,7 +1123,7 @@ relogin_freebox () {
 }
 
 # relogin if a previous login had existed and if session is disconnected
-auto_relogin() {
+auto_relogin () {
 [[ ! -z "${_APP_ENCRYPTED_TOKEN}" ]] && relogin_freebox
 }	
 
@@ -1428,8 +1466,10 @@ list_dl_task_api () {
 	[[ "${action}" == "show" ]] && p0="" && TYPE="SHOW DOWNLOADS TASK: ${token}"
 	#local answer=$(call_freebox_api  "/$api_url/" 2>&1)
 	local answer=$(call_freebox_api  "/$api_url/" )
-        local cache_result=("$(dump_json_keys_values "${answer}")")
-	#echo -e "\n${white}\t\t\t\tLIST OF DOWNLOADS TASKS:${norm}\n"        
+        #local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
 	echo -e "\n${white}\t\t\t\t\t${TYPE}${norm}\n"
         # When json reply is big (ex: recieve a lanHost object) we need to cache results 
         local id=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.id |cut -d' ' -f3))
@@ -1759,7 +1799,9 @@ ls_fs () {
 	local answer=$(get_freebox_api "/fs/ls/${fs_file_path}" ${fs_opts[@]} )
         # raw mode: set global variable '${output}' to 'raw'
 	[[ "${output}" == "raw" ]] && echo ${answer} && ctrlc
-	local cache_result=("$(dump_json_keys_values "$answer")")
+	[[ -x "$JQ" ]] \
+	&& local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+	|| local cache_result=("$(dump_json_keys_values "${answer}")")
 	local idx=(`echo -e "${cache_result[@]}" |egrep ].index |cut -d' ' -f3`)
 	local name=(`echo -e "${cache_result[@]}" |egrep ].name |cut -d' ' -f3- |sed -e 's/ /IA==/g'`)
 	local type=(`echo -e "${cache_result[@]}" |egrep ].type |cut -d' ' -f3`)
@@ -1900,7 +1942,10 @@ list_fs_task_api () {
         #local answer=$(call_freebox_api  "/$api_url/" 2>&1)
         local answer=$(call_freebox_api  "/$api_url/")
 	[[ "${output}" == "raw" ]] && echo ${answer} && ctrlc
-        local cache_result=("$(dump_json_keys_values "${answer}")")
+#        local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "$answer")") \
+        || local cache_result=("$(dump_json_keys_values "$answer")")
         echo -e "\n${white}\t\t\t\t\t${TYPE}${norm}\n"        
         # When json reply is big (ex: recieve a collection of lanHost object) we need to cache results 
         local id=($(echo -e "${cache_result[@]}" |egrep -v "}$|invalid"|egrep  ${p0}.id |cut -d' ' -f3))
@@ -2666,7 +2711,10 @@ list_share_link () {
         [[ "${action}" == "show" ]] && p0="" && TYPE="SHOW LINK TOKEN: ${token}"
         #local answer=$(call_freebox_api  "/$api_url/" 2>&1)
         local answer=$(call_freebox_api  "/$api_url/" )
-        local cache_result=("$(dump_json_keys_values "${answer}")")
+        #local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
         echo -e "\n${white}\t\t\t\t\t${TYPE}${norm}\n"        
         local path=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep  ${p0}.path |cut -d' ' -f3))
         local token=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.token |cut -d' ' -f3))
@@ -2791,6 +2839,13 @@ check_if_domain () {
         || return 1
 }
 
+# testing if *url* is a valid url : 
+check_if_url () { 
+	local url="${1}"
+        [[ ${url} =~ ^(((http|https|ftp|ftps|ftpes|sftp|ws|wss):\/\/|)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+        || return 1
+}
+
 
 ######## match debug ##########
 #[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] && echo match-mac-and="$?"
@@ -2815,7 +2870,10 @@ list_dhcp_static_lease () {
 	#local answer=$(call_freebox_api "/dhcp/static_lease" 2>&1)
 	local answer=$(call_freebox_api "/dhcp/static_lease" )
 	echo -e "\n\e${white}\t\t\t\tDHCP ASSIGNED STATIC LEASES:${norm}\n" 	
-	local cache_result=("$(dump_json_keys_values "${answer}")")
+	#local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
 	local id=($(echo -e "${cache_result[@]}" |egrep ].id |cut -d' ' -f3))
 	local mac=($(echo -e "${cache_result[@]}" |egrep ].mac |cut -d' ' -f3))
 	local ip=($(echo -e "${cache_result[@]}" |egrep ].ip |cut -d' ' -f3))
@@ -2998,7 +3056,10 @@ list_fw_redir () {
 	local answer=$(call_freebox_api "/fw/redir/")
 	echo -e "\n${white}\t\t\t\tNETWORK INCOMMING NAT REDIRECTIONS:${norm}\n" 	
 	# When json reply is big (ex: recieve a lanHost object) we need to cache results 
-	local cache_result=("$(dump_json_keys_values "${answer}")")
+	#local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
 	local id=($(echo -e "${cache_result[@]}" |egrep ].id |cut -d' ' -f3))
 	local lan_port=($(echo -e "${cache_result[@]}" |egrep ].lan_port |cut -d' ' -f3))
 	local lan_ip=($(echo -e "${cache_result[@]}" |egrep ].lan_ip |cut -d' ' -f3))
@@ -3357,7 +3418,10 @@ list_vm_prebuild_distros () {
 	local quiete=${1}  # "-q" argument make function had a silent output - "-h" for help
  	local i=0 k=0
 	answer=$(call_freebox_api /vm/distros 2>&1)
-	local cache_result=("$(dump_json_keys_values "${answer}")") # caching results
+	#local cache_result=("$(dump_json_keys_values "${answer}")") # caching results
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
         local name=($(echo -e "${cache_result[@]}" |egrep ].name |cut -d' ' -f3-|sed -e 's/ /_/g'))
         local os=($(echo -e "${cache_result[@]}" |egrep ].os |cut -d' ' -f3-))
         local url=($(echo -e "${cache_result[@]}" |egrep ].url |cut -d' ' -f3-))
@@ -4732,7 +4796,6 @@ else
         && local certs_ec_valid[$iddom]=$(get_json_value_for_key "$answer" "result[$iddom].certs.ec.days_left") \
         || local certs_ec_valid[$iddom]="${RED}none" 
 	[[ "${id[$iddom]}" == "${default_domain}" ]] && display_name="id ${GREEN}default"
-	[[ "${id[$iddom]}" == "${default_domain}" ]] && display_name="id ${GREEN}default"
         [[ "${certs[$iddom]}" == '{}' ]] \
                 && echo -e "${PURPL}DOMAIN-${iddom}:\t${WHITE}owner: ${BLUE}${owner[$iddom]}${norm}\t${WHITE}type:${norm} ${BLUE}${type[$iddom]}${norm}\t${WHITE}rsa:${norm} ${RED}${certs_rsa_valid[$iddom]}${norm} \t${WHITE}ecdsa:${norm} ${RED}${certs_ec_valid[$iddom]}${norm}\t${WHITE}${display_name}:${norm} ${RED}${id[$iddom]}${norm} " \
                 || echo -e "${BLUE}DOMAIN-${iddom}:\t${WHITE}owner: ${GREEN}${owner[$iddom]}${norm}\t${WHITE}type:${norm} ${GREEN}${type[$iddom]}${norm}\t${WHITE}rsa:${norm} ${GREEN}${certs_rsa_valid[$iddom]}${norm} \t${WHITE}ecdsa:${norm} ${GREEN}${certs_ec_valid[$iddom]}${norm}\t${WHITE}${display_name}:${norm} ${light_purple_sed}${id[$iddom]}${norm} " 
@@ -4902,12 +4965,84 @@ domain_addcert () {
 
 
 
-
 ###########################################################################################
 ## 
 ##  OTHER ACTIONS: library other actions (with simple API call) 
 ## 
 ###########################################################################################
+
+
+###############################################
+##  OTHER ACTIONS: LISTING FREEBOX COMPONENTS
+###############################################
+
+list_player () {
+local idpla=0
+answer=$(get_freebox_api player)
+        echo -e "\t\t\t${WHITE}ID, PLAYER NAME, PLAYER MODEL, PLAYER API VERSION${norm}"
+        print_term_line 100 
+
+	# caching results
+	dump_json_keys_values "$answer" >/dev/null
+	while [[ $(get_json_value_for_key "$answer" "result[$idpla].id") != "" ]] 
+        do
+        local id[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].id")
+        local mac[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].mac")
+        local stb_type[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].stb_type")
+        local name[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].device_name")
+        local model[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].device_model")
+        local reachable[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].reachable")
+        local pla_api_version[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].api_version")
+
+        [[ "${reachable[$idpla]}" == 'false' ]] \
+                && echo -e "${PURPL}PLAYER-${BLUE}${idpla}${PURPL}:\t${WHITE}id: ${RED}${id[$idpla]}${norm}  ${WHITE}mac: ${RED}${mac[$idpla]}${norm}  ${WHITE}model: ${norm}${RED}${model[$idpla]}${norm}  ${WHITE}api: ${norm}${RED}${pla_api_version[$idpla]}${norm}  ${WHITE}name:${norm} ${RED}${name[$idpla]}${norm}" \
+                || echo -e "${BLUE}PLAYER-${RED}${idpla}${BLUE}:\t${WHITE}id: ${GREEN}${id[$idpla]}${norm}  ${WHITE}mac: ${GREEN}${mac[$idpla]}${norm}  ${WHITE}model: ${norm}${GREEN}${model[$idpla]}${norm}  ${WHITE}api: ${norm}${GREEN}${pla_api_version[$idpla]}${norm}  ${WHITE}name:${norm} ${light_purple_sed}${name[$idpla]}${norm}"  
+
+       ((idpla++))
+       done
+}
+
+player_list () {
+auto_relogin && list_player
+}	
+
+
+list_repeater () {
+local idrep=0
+answer=$(get_freebox_api repeater)
+        echo -e "\t\t\t${WHITE}ID, REPEATER NAME, REPEATER MODEL, REPEATER API VERSION${norm}"
+        print_term_line 105 
+
+	# caching results
+	dump_json_keys_values "$answer" >/dev/null
+	while [[ $(get_json_value_for_key "$answer" "result[$idrep].id") != "" ]] 
+        do
+        local id[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].id")
+        local ip[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].ip.v4")
+        local mac[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].main_mac")
+        local firmware[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].firmware_version")
+        local name[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].name")
+        local model[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].model")
+        local status[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].status")
+        local pla_api_version[$idrep]=$(get_json_value_for_key "$answer" "result[$idrep].api_ver")
+
+        [[ "${status[$idrep]}" != 'running' ]] \
+                && echo -e "${PURPL}REPEATER-${RED}${id[$idrep]}${PURPL}:  ${WHITE}id: ${RED}${id[$idrep]}  ${WHITE}ip: ${RED}${ip[$idrep]}${norm}  ${WHITE}mac: ${RED}${mac[$idrep]}${norm}  ${WHITE}model: ${norm}${RED}${model[$idrep]}${norm}  ${WHITE}api: ${norm}${RED}${pla_api_version[$idrep]}${norm}  ${WHITE}name:${norm} ${RED}${name[$idrep]}${norm}" \
+                || echo -e "${BLUE}REPEATER-${GREEN}${id[$idrep]}${BLUE}:  ${WHITE}id: ${GREEN}${id[$idrep]}  ${WHITE}ip: ${GREEN}${ip[$idrep]}${norm}  ${WHITE}mac: ${GREEN}${mac[$idrep]}${norm}  ${WHITE}model: ${norm}${GREEN}${model[$idrep]}${norm}  ${WHITE}api: ${norm}${GREEN}${pla_api_version[$idrep]}${norm}  ${WHITE}name:${norm} ${light_purple_sed}${name[$idrep]}${norm}"  
+
+       ((idrep++))
+       done
+}
+
+repeater_list () {
+auto_relogin && list_repeater
+}
+
+
+
+########################################
+##  OTHER ACTIONS: WAKE-ON-LAN SUPPORT 
+########################################
 
 param_wol_fbx_err () {
 # Print errors for WAKE ON LAN 
@@ -4920,9 +5055,10 @@ error=1
 && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to Wake On LAN a machine: ${norm}\n${BLUE}mac= \npassword=  ${norm}\n" \
 && echo -e "NOTE: ${RED}Wake On LAN password length seems to be 6 char max !${norm}\n" \
 && echo -e "EXAMPLE:\n${BLUE}${funct} mac=\"00:01:02:03:04:05\" password=\"passwd\"${norm}\n" \
-&& echo -e "EXAMPLE (EMPTY PASSWORD...):\n${BLUE}${funct} mac=\"00:01:02:03:04:05\" password=\"\"\n${funct} mac=00:01:02:03:04:05 password=${norm}\n" 
+&& echo -e "EXAMPLE (EMPTY PASSWORD...):\n${BLUE}${funct} mac=\"00:01:02:03:04:05\" password=\"\"\n${funct} mac=00:01:02:03:04:05 password=${norm}" 
 
-return 1
+#return 1
+ctrlc
 }
 
 check_and_feed_wol_param () {
@@ -5412,7 +5548,7 @@ _check_freebox_api
 #
 #_____________________
 # 20240214 
-# --> fixing openssl version different '1.1.1n'
+# --> fixing openssl version when different of '1.1.1n'
 #
 #___________
 # 20240217 
@@ -5426,13 +5562,13 @@ _check_freebox_api
 #
 #___________
 # 20240223 
-# --> finished adding support of Virtual Machines => VM full support from library
+# --> finished adding support of Virtual Machines => full VM support is handeled by library
 # --> fixing small bugs 
 #
 #___________
 # 20240303 
 # --> fixing API core functions to support pretty_json required by HOME API 
-# --> fixing mkdir_fs_file and hash_fs_file frontend output
+# --> fixing mkdir_fs_file and hash_fs_file frontend output (base64 encoding / decoding)
 # --> starting to add show_xxx_task to all frontend function which return an enqueud task
 # --> starting to add 'raw' mode output to some 'frontend' function (for scrpting)
 #
@@ -5460,7 +5596,8 @@ _check_freebox_api
 #___________
 # 20240408 
 # --> fixing sourcing lib from other directory 
-# --> adding auto_relogin function to some vm action function
+# --> adding auto_relogin function to some action / function (vm +listing +...)
+# --> updating documentation: README.md
 #
 #__________
 #20241014
@@ -5468,17 +5605,34 @@ _check_freebox_api
 #
 #__________
 #20241016
-# --> adding WOL: Wake On LAN
+# --> adding Wake On LAN function (WOL) to start LAN machine from Freebox W-O-L signal  
 #
 #__________
 #20241017
 # --> adding 'auto_relogin' capability to Wake On LAN function
 # --> adding 'domain_list' function to list freebox domain name
-# --> adding personnal domain support (NOT DOCUMENTED !) : add domain, del domain, setdefault 
+# --> adding personnal domain support (NOT DOCUMENTED !) : add domain, del domain, domain setdefault
 # --> adding certificates for personnal domains from PEM files
 #
 #__________
 #20241018
-#--> adding 'check_if_domain' function to check if a domain name 
+# --> adding 'check_if_domain' function to check if a string is a domain name 
+#
+#__________
+#20241020
+# --> adding library `list` and `help` functions (source library with '--help' or '--list' parameter)
+#
+#__________
+#20241021
+# --> adding player listing function
+# --> adding repeater listing function
+#
+#__________
+#20241023
+# --> adding 'check_if_url' function to check if a string is a valid URL
+# --> adding 'jq' json parser support https://jqlang.github.io/jq/
+# --> adding usage of 'jq' where caching result is needed (API reply big json) 
+# --> updating README.md
+#
 #
 #

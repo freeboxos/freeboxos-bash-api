@@ -21,7 +21,7 @@ fbx-delta-nba_bash_api.sh
 
 
 - ### 100% BASH  
-- ### APIv10 / APIv11 (ULTRA) 
+- ### APIv12 (FREEBOX) / APIv12 (PLAYER) 
 - ### USE AT YOUR OWN RISK
 
 
@@ -44,7 +44,7 @@ Table of Contents:
 |Type| Description | Link |
 |:-|:-|:-|
 |howto example| Quick HOWTO example of how to use this lib  | [QUICK START FULL EXAMPLE](#QSFULLEX) |
-|API| FreeboxOS API considerations | [API](#API) |
+|API| FreeboxOS API - sourcing library | [API](#API) |
 |core| Create application & login API |  [LOGIN FUNCTIONS](#LOGIN) |
 |core| Functions for calling API in all cases | [CALL FUNCTIONS](#CALL) |
 |core| Functions for retrieving Freebox component status | [STATUS FUNCTIONS](#STATUS)|
@@ -60,6 +60,7 @@ Table of Contents:
 |frontend VM| Functions for managing VM | [VIRTUAL MACHINES FUNCTIONS](#VM) |
 |frontend| Functions for managing DOMAIN NAME | [DOMAIN NAME FUNCTIONS](#DOMAIN) |
 |frontend| Functions for formatting API reply of frontend functions | [API REPLY OUTPUT](#REPLY) |
+|core frontend| Functions for listing Freebox components from API | [API LISTING](#LISTING) |
 |core| Functions for making direct actions on box from API | [API ACTIONS](#ACTIONS) |
 
 
@@ -98,10 +99,35 @@ Table of Contents:
 
 <br/>
 
+<a name="TOC4"></a>
+
+#### 4. External tools needed to use this library
+
+
+|Type| Name | Description | Link |
+|:-|:-|:-|:-|
+|$${\color{red}\text{Required}}$$| $${\color{red}\text{ curl }}$$ | $${\color{red}\text{needed for all API call}}$$ |[curl](https://github.com/curl/curl)|
+|$${\color{red}\text{Required}}$$| $${\color{red}\text{ openssl }}$$ | $${\color{red}\text{needed for authentication}}$$ |[openssl](https://github.com/openssl/openssl)|
+|$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ websocat }}$$  | $${\color{orange}\text{needed to use websocket API (VM console...)}}$$ |[websocat](https://github.com/vi/websocat/) |
+|$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ tigervnc }}$$  | $${\color{orange}\text{needed to access VM screen over websocket}}$$ |[tigervnc](https://github.com/TigerVNC/tigervnc) |
+|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ GNU screen }}$$  | $${\color{yellow}\text{allow to launch VM console in a SCREEN}}$$ |[GNU screen](https://savannah.gnu.org/git/?group=screen) |
+|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ GNU dtach }}$$  | $${\color{yellow}\text{allow to launch VM console detached from terminal}}$$ |[GNU dtach](https://github.com/crigler/dtach) |
+|$${\color{lightgreen}\text{Recommended}}$$| $${\color{lightgreen}\text{ jq }}$$ | $${\color{lightgreen}\text{needed for fast json parsing}}$$ |[jq](https://github.com/jqlang/jq)|
+
+<br/>
+
+### NOTE : 
+$${\color{red}\text{To use this library you must install (at least) curl + openssl.}}$$ $${\color{orange}\text{If you want to use VM functions, you will have to install websocat + tigervnc.}}$$ $${\color{lightgreen}\text{If jq is installed, it will be used automatically to speed-up functions which need to run faster.}}$$
+---
+
+<br/>
+
+
+
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ___________________________________________________________________________________________
 
@@ -109,7 +135,7 @@ ________________________________________________________________________________
 Quick Start
 -----------
 
-You need to have `curl` and `openssl` installed.
+You need to have `curl` and `openssl` installed (see [EXTERNAL TOOLS](#TOC4)).
 
 - #### Get the source:
 ```bash
@@ -167,8 +193,8 @@ free_fra
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ______________________________________________________________________________________
 
@@ -253,8 +279,8 @@ $ reboot_freebox
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -268,9 +294,177 @@ API
 - Some underlying functions used by other functions of the API may NOT be listed in this README but you have here the most important functions for writing an application and for direct use in your bash cmdline.
 - Frontend functions listed above can be used directlly like an end user program as they include their own check parameters engine and error / help output and when necessary tasks monitoring and task management.
 
+ 
+
+
+API USAGE: SOURCING LIBRARY 
+-----------------
+
+***Sourcing this library support 3 modes :*** 
+
+- help 
+- list
+- \<empty> : this mode (no parameters) is the $${\color{red}\text{normal mode}}$$
+
+##### NOTE : 
+$${\color{red}\text{SOURCING LIBRARY WITH HELP OR LIST OPTION DON'T SOURCE FUNCTIONS}}$$
+---
+
+### ***\**help parameter***
+This mode will output a summary of help
+
+##### Example
+```bash  
+source fbx-delta-nba_bash_api.sh --help
+```  
+
+```bash  
+
+To source all library functions source without parameters (standard use):
+Example: 
+	 source ./fbx-delta-nba_bash_api.sh 
+
+Sourcing library with 'help' or 'list' parameters DOES NOT source library ! 
+Parameters:
+	  -h,--h,help,-help,--help	- print this help
+	  -l,--l,list,-list,--list	- print a list of all functions of the library
+Example: 
+	  source ./fbx-delta-nba_bash_api.sh --help
+	  source ./fbx-delta-nba_bash_api.sh --list 
+
+HELP: 
+	  - To get help and example, please read the attached README.md file or the code
+	  - All frontend functions have their embedded help (run function with no parameters)
+	    Example: 
+	    source ./fbx-delta-nba_bash_api.sh
+	    login_freebox "$MY_APP_ID" "$MY_APP_TOKEN" && add_dhcp_static_lease
+	  - You can access online help here : 
+	  https://github.com/nbanb/fbx-delta-nba_bash_api.sh 
+
+SUPPORT: 
+	  - Support is availiable @ GitHub.com 
+	  - You can open issues here : 
+	  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new
+
+```  
+
+##### Picture
+![image](https://github.com/user-attachments/assets/874bcf93-6c76-440a-86df-b44aa6178715)
+<br />
+
+### ***\**list parameter***
+This mode will output a list of all function and where to find functions help
+
+##### Example
+```bash  
+source fbx-delta-nba_bash_api.sh --list
+```  
+
+```bash  
+
+fbx-delta-nba_bash_api.sh functions listing on: 2024-10-21
+
+add_dhcp_static_lease                     add_dl_task_api                  add_freebox_api
+add_fw_redir                              add_share_link                   app_login_freebox
+archive_fs_file                           authorize_application            auto_relogin
+call_freebox_api                          call_freebox_api2                call_freebox-ws_api
+call_freebox-ws_vnc                       check_and_feed_dhcp_param        check_and_feed_dl_param
+check_and_feed_domain_param               check_and_feed_fs_param          check_and_feed_fs_task_param
+check_and_feed_fw_redir_param             check_and_feed_share_link_param  check_and_feed_vm_action_param
+check_and_feed_vm_prebuild_distros_param  check_and_feed_wol_param         _check_freebox_api
+check_if_domain                           check_if_ip                      check_if_mac
+check_if_port                             check_if_rfc1918                 check_login_freebox
+_check_success                            _check_success2                  _check_success_old
+check_tool                                check_tool_exit                  check_vm_param
+colorize_output                           colorize_output_pretty_json      cp_fs_file
+cp_fs_file_raw                            create_vm_variables              ctrlc
+ctrlc_trap                                del_bundle_cert_file             del_dhcp_static_lease
+del_dl_task_api                           del_freebox_api                  del_fs_file
+del_fs_task                               del_fw_redir                     del_share_link
+dis_fw_redir                              dl_task_log_api                  dl_vm_prebuild_distros
+domain_add                                domain_addcert                   domain_del
+domain_list                               domain_setdefault                dump_json_keys_values
+ena_fw_redir                              enc_dl_task_api                  extract_fs_file
+feeds_vmdisk_variables                    full_vm_detail                   get_freebox_api
+get_fs_task                               get_json_value_for_key           get_json_value_for_key2
+get_share_link                            get_vm_object_var                hash_fs_file
+hash_fs_task                              list_dhcp_static_lease           list_dl_task_api
+list_domain                               list_fs_file                     list_fs_task_api
+list_fw_redir                             list_player                      list_repeater
+list_share_link                           list_vm                          list_vm_prebuild_distros
+local_direct_dl_api                       login_fbx                        login_fbx2
+login_freebox                             logout_freebox                   ls_fs
+mk_bundle_cert_file                       mkdir_fs_file                    modify_vm_variables
+mon_fs_task_api                           monitor_dl_task_adv_api          monitor_dl_task_api
+mv_fs_file                                param_dhcp_err                   param_dom_fbx_err
+param_download_err                        param_fs_err                     param_fs_task_err
+param_fw_redir_err                        param_share_link_err             param_vm_action_err
+param_vm_disk_err                         param_vm_prebuild_distros_err    param_wol_fbx_err
+_parse_and_cache_json                     _parse_array                     _parse_json
+_parse_object                             _parse_value                     player_list
+post_fbx_api                              print_err                        print_term_line
+progress                                  put_fbx_api                      reboot_freebox
+relogin_freebox                           rename_fs_file                   repeater_list
+rm_fs_file                                show_dl_task_api                 show_fs_task
+show_share_link                           shutdown_freebox                 status_freebox
+_throw                                    _throw_nba                       _tokenize_json
+update_freebox_api                        upd_dhcp_static_lease            upd_dl_task_api
+upd_fbx_api                               upd_fs_task                      upd_fw_redir
+vm_add                                    vm_adddisk                       vm_console
+vm_deldisk                                vm_delete                        vm_detail
+vm_list                                   vm_listdisk                      vm_modify
+vm_param                                  vm_reload                        vm_resizedisk
+vm_resource                               vm_restart                       vm_sconsole
+vm_show                                   vm_shutdown                      vm_start
+vm_stop                                   vm_svnc                          vm_vnc
+websocat_session                          wol_fbx                          wrprogress
+ws_session                                                                 
+
+Sourcing library with 'list' parameters DOES NOT source library functions ! 
+
+To source all library functions source without parameters:
+Example: 
+	 source ./fbx-delta-nba_bash_api.sh 
+
+
+FUNCTIONS HELP: 
+	  - To get help and example, please read the attached README.md file or the code
+	  - All frontend functions have their embedded help (run function with no parameters)
+	    Example: 
+	    source ./fbx-delta-nba_bash_api.sh
+	    login_freebox "$MY_APP_ID" "$MY_APP_TOKEN" && add_dhcp_static_lease
+	  - You can access online help here : 
+	  https://github.com/nbanb/fbx-delta-nba_bash_api.sh 
+
+SUPPORT: 
+	  - Support is availiable @ GitHub.com 
+	  - You can open issues here : 
+	  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new
+
+
+```  
+
+##### Picture
+![image](https://github.com/user-attachments/assets/3cfdd2d9-075a-4bd3-a130-107634f6d0a2)
+![image](https://github.com/user-attachments/assets/536d56ab-ec28-40f2-9465-1f77718d24c0)
+
+
+
+
+##### NOTE : 
+$${\color{red}\text{TO USE LIBRARY FUNCTIONS SOURCE LIBRARY WITH NO PARAMETERS}}$$
+----
+
+##### Example
+```bash  
+source fbx-delta-nba_bash_api.sh
+```  
+
+
+
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 _____________________________________________________________________________________________
 
@@ -341,8 +535,8 @@ MY_APP_TOKEN="I7Sj+jpquj0rnPVSjLokXhy3gglOZflOQDTxjA8Vxdbma/VtoRwhR/nIluBuG8Wt"
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 
 -------------------------------------------------------------------------------
@@ -412,9 +606,21 @@ Return 0 if success, 1 otherwise
 relogin_freebox
 ```
 
+-------------------------------------------------------------------------------
 
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+
+#### *  auto_relogin 
+After a first sucessfull login using function 'login_freebox', this function will try to detect *_APP_ENCRYPTED_TOKEN* in the environment and will relogin the application if *_APP_ENCRYPTED_TOKEN* exist.  
+Return 0 if success, 1 otherwise
+##### Example
+```bash
+auto_relogin
+```
+
+
+___________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -499,11 +705,39 @@ answer=$(call_freebox-ws_api '/vm/8/console')
 
 
 
+#### *  call_freebox-ws_vnc *api_path*
+It is used to call a freebox Websocket API with websocket request and to connect local VNC tcp socket. It need you install 'websocat' from [websocat](https://github.com/vi/websocat/) and to install 'tigervnc' from [TigerVNC](https://github.com/TigerVNC/tigervnc). The function will return a websocket interractive connection which piped Qemu VNC websocke. It exit with an exit code of 0 if successfull. Otherwise it will return an empty string with an exit code of 1 and the reason of the error output to STDERR.
+You can find the list of all available websocket api directly in FreeboxOS [here](https://mafreebox.freebox.fr/#Fbx.os.app.help.app)
+##### Example
+```bash
+answer=$(call_freebox-ws_vnc '/vm/8/vnc')
+```
+
+-------------------------------------------------------------------------------
+
+
+
 #### *  get_json_value_for_key *json_string* *key*
 This function will return the value for the *key* from the *json_string*
 ##### Example
 ```bash
 value=$(get_json_value_for_key "$answer" 'result.down.maxrate')
+```
+
+-------------------------------------------------------------------------------
+
+
+
+#### *  get_json_value_for_key_jq *json_string* *key*
+This function will return the value for the *key* from the *json_string*
+This function is the same as *get_json_value_for_key* but using `jq` parser 
+https://jqlang.github.io/jq/
+
+This function is used when direct json query is needed (without caching json "keys values"). It is 20 times faster than *get_json_value_for_key*  but needed you install `jq` parser
+
+##### Example
+```bash
+value=$(get_json_value_for_key_jq "$answer" 'result.down.maxrate')
 ```
 
 -------------------------------------------------------------------------------
@@ -540,6 +774,42 @@ bytes_down: 2726853</pre>
 -------------------------------------------------------------------------------
 
 
+#### *  dump_json_keys_values_jq *json_string*
+This function will dump on stdout all the keys values pairs from the *json_string*
+This function is the same as *dump_json_keys_values* but using `jq` parser 
+https://jqlang.github.io/jq/
+
+This function is used to cache results and is 20 times faster than *dump_json_keys_values* but needed you install `jq` parser
+
+##### Example
+```bash
+answer=$(call_freebox_api '/connection/')
+dump_json_keys_values_jq "$answer"
+echo
+bytes_down=$(get_json_value_for_key_jq "$answer" 'result.bytes_down')
+echo "bytes_down: $bytes_down"
+```
+<pre>
+success = true
+result.type = rfc2684
+result.rate_down = 40
+result.bytes_up = 945912
+result.rate_up = 0
+result.bandwidth_up = 412981
+result.ipv6 = 2a01:e35:XXXX:XXX::1
+result.bandwidth_down = 3218716
+result.media = xdsl
+result.state = up
+result.bytes_down = 2726853
+result.ipv4 = XX.XXX.XXX.XXX
+result = {"type":rfc2684,"rate_down":40,"bytes_up":945912,"rate_up":0,"bandwidth_up":412981,"ipv6":2a01:e35:XXXX:XXXX::1,"bandwidth_down":3218716,"media":xdsl,"state":up,"bytes_down":2726853,"ipv4":XX.XXX.XXX.XXX}
+
+</pre>
+
+
+-------------------------------------------------------------------------------
+
+
 
 #### *  _check_success
 This function will check if last command/function result is successfull. It is not a "system logical test"but a check on the answer returned by the API. It check that "success" has for value 'true' in API reply:  {"success":true,"result":{...}}
@@ -554,8 +824,8 @@ $ echo $?
 ```
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -610,8 +880,8 @@ Result :
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -701,9 +971,36 @@ check_if_mac 00:a3:b6:c9:da:fb
 echo $?
 ```
 
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_domain *string*
+This function will check if the provided argument is a domain name (only REGEX check on syntaxe, no DNS request). Return code will be 0 if the provided argument is a DOMAIN NAME, and will exit with a return code of 1 if argument is not a valid DOMAIN NAME.
+##### Example
+```bash
+check_if_domain test.freebox.lan
+echo $?
+```
+
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_url *string*
+This function will check if the provided argument is a valid URL composed by a domain name (only REGEX check on syntaxe, no DNS request) and a prefix like *https://*. Return code will be 0 if the provided argument is a valid URL, and will exit with a return code of 1 if argument is not a valid URL.
+##### Note
+Supported prefixes: http,https,ftp,ftps,ftpes,sftp,ws,wss
+
+##### Example
+```bash
+check_if_url wss://test.freebox.lan
+echo $?
+```
+
+
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -719,8 +1016,8 @@ ________________________________________________________________________________
 
 
 ___________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ____________________________________________________________________________________________
 
@@ -1308,8 +1605,8 @@ Download Task log: task 335
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -1434,8 +1731,8 @@ Sucessfully delete task #475: {"success":true}
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -1487,8 +1784,8 @@ Done:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -1778,8 +2075,8 @@ operation completed:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -2030,8 +2327,8 @@ operation completed:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -2440,8 +2737,8 @@ Impossible de supprimer la redirection : Entrée non trouvée: noent
  
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -2483,8 +2780,8 @@ When using this API, you will have to manage 'filesystem tasks' for one hand and
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -2879,8 +3176,8 @@ No filesystem tasks to list !
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -3772,8 +4069,8 @@ idx: 3		file	20230114-18:01:34	size: 2 GB	name: njd-efi-arm64.qcow2
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -3845,8 +4142,8 @@ Since the whole documentation had been written, the new Freebox ULTRA appears in
 <br />
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -4167,8 +4464,8 @@ idx: 2		file	20230113-09:15:05	size: 2 GB	name: MyDeltaJeeDom.qcow2
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 
@@ -4182,9 +4479,9 @@ ________________________________________________________________________________
 API FRONTEND FUNCTIONS - DOMAIN NAME
 -----------------
 You must notice that today, this API is not documented.
-As describes in the Freebox developper documentation, NOT DOCUMENTED API MUST NOT BE USED ! 
+As describes in the Freebox developper documentation, UNDOCUMENTED API MUST NOT BE USED ! 
 
-But as it's a mess to go to FreeboxOS web interface to define domains and upload certificates, I decide to implement this functionnality.
+But as it's really boring to go to FreeboxOS web interface to define domains and upload certificates, I decide to implement this functionnality.
 At the time I'm writing (end of 2024), it's working well, but please $${\color{red}\text{USE AT YOUR OWN RISK }}$$
 
 
@@ -4192,11 +4489,11 @@ At the time I'm writing (end of 2024), it's working well, but please $${\color{r
 <br />
 
 **Note :**   
-NOT DOCUMENTED API MUST NOT BE USED ! 
+$${\color{red}\text{UNDOCUMENTED API MUST NOT BE USED ! }}$$ 
 
 
 **New :**   
---> Function domain_setdefault let you define Freebox default domain name    
+--> Function domain_setdefault let you define Freebox default domain name (used for remote @ access)   
 --> listing domain name support auto_relogin   
 <br />
 
@@ -4209,8 +4506,8 @@ NOT DOCUMENTED API MUST NOT BE USED !
 |domain_list|list Freebox configured domain |
 |domain_add|add a new domain name on Freebox|
 |domain_del|delete a configured domain name on Freebox|
-|domain_addcert|add a TLS certificat to a Freebox configured domain|
-|domain_setdefault|set Freebox default domain name (used for remote acceess)|
+|domain_addcert|add a TLS certificat to a configured Freebox domain|
+|domain_setdefault|set Freebox default domain name (used for remote access)|
 
 <br />
 
@@ -4218,7 +4515,7 @@ NOT DOCUMENTED API MUST NOT BE USED !
 -------------------------------------------------------------------------------
 
 #### *  domain_list
-This function will simply retrieve the list of domains configured  
+This function will simply retrieve the list of configured domains  
 
 ##### Example
 ```bash  
@@ -4245,14 +4542,14 @@ DOMAIN-12:	owner: user	type: custom	rsa: none 	ecdsa: none	domain id : test.com
 ```
 
 ##### Picture
-![Capture d’écran du 2024-10-19 12-29-47](https://github.com/user-attachments/assets/178d2c7d-cc47-4703-ad8c-06ff3c8be105)
+![Capture dbC)cran du 2024-10-19 12-29-47](https://github.com/user-attachments/assets/206b1740-7c3f-47b4-87e7-6467b0c12ddd)
 
 
 -------------------------------------------------------------------------------
 
 
 #### *  domain_add
-This function will simply retrieve the list of domains configured  
+This function will simply add a domains to the list of configured domains  
 
 ##### Example
 ```bash  
@@ -4296,8 +4593,50 @@ result:
 -------------------------------------------------------------------------------
 
 
+#### *  domain_del
+This function will simply delete a domains from configured Freebox domains
+
+##### Example
+```bash  
+domain_del
+```
+
+```bash
+ERROR: <param> must be :
+id          # id must be a domain name
+
+NOTE: you can get a list of all configured domain and status (showing all 'id'), just run:
+domain_list
+
+EXAMPLE:
+domain_del id=my.domain.com
+
+```
+
+##### Picture
+![image](https://github.com/user-attachments/assets/1ecbbd07-293d-457e-a094-df9f346c417d)
+
+
+```bash  
+domain_del id=test.fbx.lan
+```
+
+```bash
+
+operation completed:
+{"success":true}
+
+```
+
+##### Picture
+![image](https://github.com/user-attachments/assets/0d69261b-6df6-49f3-af44-1e125fe3dc2f)
+
+
+-------------------------------------------------------------------------------
+
+
 #### *  domain_addcert
-This function will simply retrieve the list of domains configured  
+This function will add a TLS certificate to a configured domain name
 
 ##### Example
 ```bash  
@@ -4354,8 +4693,104 @@ operation completed:
 <br />
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+
+
+__________________________________________________________________________________________
+
+<a name="LISTING"></a>   
+
+
+
+API LISTING FUNCTIONS - LISTING FREEBOX COMPONENTS
+-----------------
+
+To be able to interract with other "freebox" plugged devices API, it's necesary to list them  
+
+<br />
+
+**Note :**   
+$${\color{red}\text{LISTING OUTPUT COLOR CHANGE IF DEVICE IS ONLINE OR OFFLINE}}$$
+
+----
+
+***Listing player device :*** 
+
+
+##### Example
+```bash  
+list_player
+```  
+##### Or
+```bash  
+player_list
+```
+
+
+```bash  
+			ID, PLAYER NAME, PLAYER MODEL, PLAYER API VERSION
+----------------------------------------------------------------------------------------------------
+PLAYER-0:	id: 17  mac: 34:27:92:80:29:7c  model: fbx7hd-delta  api: 12.0  name: Freebox Player
+
+```  
+
+**Player ONLINE :** 
+
+##### Picture
+![image](https://github.com/user-attachments/assets/9b44b17c-7743-4d4f-b269-26a43129a2d5)
+
+**Player OFFLINE :** 
+
+##### Picture
+![image](https://github.com/user-attachments/assets/3229e8eb-cbc5-42d3-bbea-c3e92c05ad6e)
+
+------
+
+
+***Listing wireless repeater device :*** 
+
+**Note :**   
+$${\color{red}\text{LISTING OUTPUT COLOR CHANGE IF DEVICE IS ONLINE OR OFFLINE}}$$
+
+----
+
+
+##### Example
+```bash  
+list_repeater
+```  
+##### Or
+```bash  
+repeater_list
+```  
+
+```bash  
+			ID, REPEATER NAME, REPEATER MODEL, REPEATER API VERSION
+---------------------------------------------------------------------------------------------------------
+REPEATER-1:  id: 1  ip: 192.168.100.89  mac: 8C:97:EA:55:BB:B6  model: fbxwmr-r1  api: 2  name: EntrC)e
+
+```  
+
+**Repeater ONLINE :** 
+
+##### Picture
+![image](https://github.com/user-attachments/assets/2d8a0d17-e62d-4c8b-aed3-088c645e2d17)
+
+
+**Repeater OFFLINE :**
+ 
+##### Picture
+![image](https://github.com/user-attachments/assets/5bfb7c10-e873-4415-9e2c-5c58e2decbe3)
+
+
+
+<br />
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 
 
@@ -4542,8 +4977,8 @@ list_dhcp_static_lease | sed '/00:01:02:03:04:05/!d'
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
 <a name="ACTIONS"></a>
@@ -4559,9 +4994,69 @@ The application must be granted to modify the setup of the freebox (from freebox
 reboot_freebox
 ```
 
+---
+
+#### *  shutdown_freebox
+This function will shutdown your freebox. Return code will be 0 if the freebox is rebooting, 1 otherwise.
+The application must be granted to modify the setup of the freebox (from freebox web interface, see: [GRANT API ACCESS](#GRANTAXX))
+##### Example
+```bash
+shutdown_freebox
+```
+---
+
+
+#### *  wol_fbx
+This function is able to WAKE-ON-LAN a machine which had previously be configured (in UEFI BIOS stack) to start when recieving a "wake-on-lan". Return code will be 0 if the signal had been send 1 otherwise and 130 if command parameters failed to be parsed.
+Your application must be granted to modify the setup of the freebox to use WAKE-ON-LAN function (from freebox web interface, see: [GRANT API ACCESS](#GRANTAXX))
+##### Example
+```bash
+wol_fbx
+```
+
+```bash
+
+ERROR: <param> for wol_fbx must be some of:
+mac=
+password=
+
+NOTE: minimum parameters to specify on cmdline to Wake On LAN a machine: 
+mac= 
+password=  
+
+NOTE: Wake On LAN password length seems to be 6 char max !
+
+EXAMPLE:
+wol_fbx mac="00:01:02:03:04:05" password="passwd"
+
+EXAMPLE (EMPTY PASSWORD...):
+wol_fbx mac="00:01:02:03:04:05" password=""
+wol_fbx mac=00:01:02:03:04:05 password=
+
+```
+
+##### Picture
+![image](https://github.com/user-attachments/assets/3f6c70dd-6931-43b6-b40e-84b5a64c7dce)
+
+##### Example
+```bash
+wol_fbx mac=01:00:5e:00:00:fb password=test123
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+```
+
+##### Picture
+![image](https://github.com/user-attachments/assets/99e873f6-fb70-4fa3-afc6-d0d232216dcf)
+
+
+
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
 
@@ -4593,8 +5088,8 @@ See the following capture:
 ![fbx-app-axx](https://user-images.githubusercontent.com/13208359/211077203-039cdce8-b617-48ba-b612-b5a57d497bd5.png)
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 ___________________________________________________________________________________________
 
 
@@ -4624,8 +5119,8 @@ fbx         IN        A       82.82.82.82
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
 
@@ -4644,8 +5139,8 @@ Once you have your public URL pointing to your Freebox and a valid TLS certifica
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 -------------------------------------------------------------------------------
 
@@ -4677,8 +5172,8 @@ Allow remote access to your box:
 Now you're ready to configure your domain name URL and TLS certificate 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 
 -------------------------------------------------------------------------------
@@ -4736,8 +5231,8 @@ And now, verify your BOX's configuration is fine:
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 __________________________________________________________________________________________
 
 <a name="FULLSTK"></a>
@@ -4777,8 +5272,8 @@ When you're connected, select your box tab (in France "Ma Freebox", maybe "My Il
 
 
 __________________________________________________________________________________________
-| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) |
-|:-:|:-:|:-:|:-:|
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [TABLE OF EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 ___________________________________________________________________________________________
 
