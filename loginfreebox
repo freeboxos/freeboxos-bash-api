@@ -3,7 +3,11 @@
 # NBA 20230104: Simple script to connect your Freeox API 
 # This let you use functions from fbx-delta-nba_bash_api.sh directly from your bash terminal
 
-source ./fbx-delta-nba_bash_api.sh
+# NBA 20240408: This login script and fbx-delta-nba_bash_api.sh MUST be in the same directory
+
+_LIB_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source ${_LIB_DIR}/fbx-delta-nba_bash_api.sh
+
 
 MY_APP_ID="MyShellApp"
 MY_APP_TOKEN="Here_you_must_put_the_for_MyShellApp_obtained_with_function_authorize_application"
