@@ -108,17 +108,27 @@ Table of Contents:
 |:-|:-|:-|:-|
 |$${\color{red}\text{Required}}$$| $${\color{red}\text{ curl }}$$ | $${\color{red}\text{needed for all API call}}$$ |[curl](https://github.com/curl/curl)|
 |$${\color{red}\text{Required}}$$| $${\color{red}\text{ openssl }}$$ | $${\color{red}\text{needed for authentication}}$$ |[openssl](https://github.com/openssl/openssl)|
+|$${\color{red}\text{Required}}$$| $${\color{red}\text{ coreutils }}$$ | [issue#9](https://github.com/freeboxos/freeboxos-bash-api/issues/9) $${\color{red}\text{basic Unix / Linux tools}}$$ |[GNU coreutils](https://github.com/coreutils/coreutils)|
+|$${\color{red}\text{Required}}$$| $${\color{red}\text{ file }}$$ | [issue#9](https://github.com/freeboxos/freeboxos-bash-api/issues/9) $${\color{red}\text{needed to detect PEM certificates}}$$ |[file](https://github.com/file/file)|
 |$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ websocat }}$$  | $${\color{orange}\text{needed to use websocket API (VM console...)}}$$ |[websocat](https://github.com/vi/websocat/) |
 |$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ tigervnc }}$$  | $${\color{orange}\text{needed to access VM screen over websocket}}$$ |[tigervnc](https://github.com/TigerVNC/tigervnc) |
-|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ GNU screen }}$$  | $${\color{yellow}\text{allow to launch VM console in a SCREEN}}$$ |[GNU screen](https://savannah.gnu.org/git/?group=screen) |
-|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ GNU dtach }}$$  | $${\color{yellow}\text{allow to launch VM console detached from terminal}}$$ |[GNU dtach](https://github.com/crigler/dtach) |
+|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ screen }}$$  | $${\color{yellow}\text{allow to launch VM console in a SCREEN}}$$ |[GNU screen](https://savannah.gnu.org/git/?group=screen) |
+|$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ dtach }}$$  | $${\color{yellow}\text{allow to launch VM console detached from terminal}}$$ |[GNU dtach](https://github.com/crigler/dtach) |
 |$${\color{lightgreen}\text{Recommended}}$$| $${\color{lightgreen}\text{ jq }}$$ | $${\color{lightgreen}\text{needed for fast json parsing}}$$ |[jq](https://github.com/jqlang/jq)|
 
 <br/>
 
 ### NOTE : 
-$${\color{red}\text{To use this library you must install (at least) curl + openssl.}}$$ $${\color{orange}\text{If you want to use VM functions, you will have to install websocat + tigervnc.}}$$ $${\color{lightgreen}\text{If jq is installed, it will be used automatically to speed-up functions which need to run faster.}}$$
----
+$${\color{red}\text{To use this library you must install (at least) :}}$$ 
+$${\color{red}\text{- curl}}$$ 
+$${\color{red}\text{- openssl}}$$ 
+$${\color{red}\text{- file}}$$ 
+$${\color{red}\text{- coreutils}}$$ 
+$${\color{red}\text{You should use your distribution package manager to install those tools.}}$$ 
+--
+$${\color{orange}\text{If you want to use VM functions, you will have to install websocat + tigervnc.}}$$ 
+$${\color{lightgreen}\text{If jq is installed, it will be used to speed-up functions which need to run faster.}}$$
+--
 
 <br/>
 
@@ -247,7 +257,7 @@ login_freebox "$MY_APP_ID" "$MY_APP_TOKEN"
 answer=$(call_freebox_api /system/)
 
 # extract your box uptime 
-uptime=$(get_json_value_for_key "${answer}" 'result.uptime')
+uptime=$(get_json_value_for_key "${answer}" "result.uptime")
 
 # print the result
 echo "My box is up since $uptime"

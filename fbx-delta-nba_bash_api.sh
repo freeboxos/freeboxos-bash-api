@@ -283,9 +283,13 @@ ${ILIADBOX_DEFAULT_CACERT}"
         || BOX="FREEBOX" 
 
 
+
+####### NBA CHECKING CERTIFICATES #######
 # Verifying that FREEBOX_CA_BUNDLE is a valid list of PEM certificate
 # if yes: FREEBOX_CA_BUNDLE will be use to verify freebox domain name TLS certificate 
 # if not: API librairy will fallback to insecure TLS /!\ no certificate check /!\
+check_tool mktemp 2>/dev/null
+check_tool file 2>/dev/null
 CAbdl=$(mktemp /dev/shm/fbx-ca-bundle.XXX)
 echo -e "$FREEBOX_CA_BUNDLE" |grep -v ^$ > ${CAbdl}
 is_cert=$(file ${CAbdl}|cut -d' ' -f2-)
@@ -497,6 +501,7 @@ FREEBOX_CACERT=$FREEBOX_CA_BUNDLE
 }
 
 
+
 ####### NBA CHECK TOOL #######
 # This function allows you to check if the required tools have been installed.
 # As "websocat" was not in my distribution repository, if check_tool detect 
@@ -507,21 +512,29 @@ if ! command -v $cmd &>/dev/null
   then
     echo -e "\n${RED}$cmd${norm} could not be found. Please install ${RED}$cmd${norm}\n"
     [[ "$cmd" == "websocat" ]] && echo -e "${GREEN}websocat install on amd64/emt64${norm}    
-$ curl -L https://github.com/vi/websocat/releases/download/v1.12.0/websocat.x86_64-unknown-linux-musl >websocat-1.12_x86_64
-$ sudo cp websocat-1.12_x86_64 /usr/bin/websocat-1.12_x86_64
-$ sudo ln -s /usr/bin/websocat-1.12_x86_64 /usr/bin/websocat
-$ sudo chmod +x /usr/bin/websocat-1.12_x86_64
+$ curl -L https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl >websocat-1.13_x86_64
+$ sudo cp websocat-1.13_x86_64 /usr/bin/websocat-1.13_x86_64
+$ sudo ln -s /usr/bin/websocat-1.13_x86_64 /usr/bin/websocat
+$ sudo chmod +x /usr/bin/websocat-1.13_x86_64
 
 ${GREEN}websocat install on arm64: aarch64${norm}
-$ curl -L https://github.com/vi/websocat/releases/download/v1.12.0/websocat.aarch64-unknown-linux-musl >websocat-1.12_aarch64 
-$ sudo cp websocat-1.12_aarch64 /usr/bin/websocat-1.12_aarch64
-$ sudo ln -s /usr/bin/websocat-1.12_aarch64 /usr/bin/websocat
-$ sudo chmod +x /usr/bin/websocat-1.12_aarch64
+$ curl -L https://github.com/vi/websocat/releases/download/v1.13.0/websocat.aarch64-unknown-linux-musl >websocat-1.13_aarch64 
+$ sudo cp websocat-1.13_aarch64 /usr/bin/websocat-1.13_aarch64
+$ sudo ln -s /usr/bin/websocat-1.13_aarch64 /usr/bin/websocat
+$ sudo chmod +x /usr/bin/websocat-1.13_aarch64
 " && error=1 && exit 30
     [[ "$cmd" == "vncviewer" ]] && echo -e "You must install ${RED}tigervnc-viewer${norm}
 For latest version, see: https://github.com/TigerVNC/tigervnc
 Or try to install directly from your distribution package manager
 " && error=1 && exit 31
+    [[ "$cmd" == "mktemp" ]] && echo -e "You must install ${RED}coreutils${norm} package
+It is recommended that you install \"coreutils\" directly from your distribution package manager
+If you cannot find it, see : https://github.com/coreutils/coreutils
+" && error=1 && exit 32
+    [[ "$cmd" == "file" ]] && echo -e "You must install ${RED}file${norm} package
+It is recommended that you install \"file\" directly from your distribution package manager
+If you cannot find it, see : https://github.com/file/file
+" && error=1 && exit 33
 
 elif [[ "$cmd" == "vncviewer" ]]
   then
@@ -530,13 +543,13 @@ elif [[ "$cmd" == "vncviewer" ]]
 		&& echo -e "\nYou must install ${RED}tigervnc-viewer${norm}\n
 For latest version, see: https://github.com/TigerVNC/tigervnc
 Or try to install directly from your distribution package manager
-" && error=1 && exit 32
+" && error=1 && exit 34
 fi
 return 0
 }
 
 # adding this check_tool function which launch check_tool_exit in a bash subshell:
-# this way 'exit 31' in check_tool_exit does not disconnect session when sourcing 
+# this way 'exit 3x' in check_tool_exit does not disconnect session when sourcing 
 # fbx-delta-nba_bash_api.sh library in another program 
 check_tool () {
 bash -c "source ${BASH_SOURCE[0]} && check_tool_exit $1"
@@ -547,7 +560,6 @@ check_tool_jq () {
 	JQ=$(which jq)
 } 
 check_tool_jq	
-
 ####### NBA PRINT TERMINAL LINE #######
 # terminal dash line (---) autoscale from terminal width or forced width by parameter
 print_term_line () {
@@ -5629,10 +5641,13 @@ _check_freebox_api
 #
 #__________
 #20241023
-# --> adding 'check_if_url' function to check if a string is a valid URL
+# --> adding 'check_if_url' function to check if a string is a valid URL 
 # --> adding 'jq' json parser support https://jqlang.github.io/jq/
 # --> adding usage of 'jq' where caching result is needed (API reply big json) 
 # --> updating README.md
 #
-#
+#__________
+#20241023
+# --> adding check command file and mktemp 
+# --> updating check_tool_exit function
 #
