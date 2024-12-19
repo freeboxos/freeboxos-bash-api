@@ -1,14 +1,14 @@
 #!/bin/bash
 ###########################################################################################
 ##
-##          FREEBOX DELTA LIBRARY WITH VM SUPPORT: fbx-delta-nba_bash_api.sh 
+##          FREEBOX DELTA LIBRARY WITH VM SUPPORT: fbx-delta-nba_bash_api.sh
 ##
-##          => forked by NBA from https://github.com/JrCs/freeboxos-bash-api 
+##          => forked by NBA from https://github.com/JrCs/freeboxos-bash-api
 ##_________________________________________________________________________________________
 ##
-## 
+##
 ##   THIS BASH LIBRARY (from 2013 to 2024):
-##           => allow you to call all HTTPS & WEBSOCKET API on Freebox / Iliadbox 
+##           => allow you to call all HTTPS & WEBSOCKET API on Freebox / Iliadbox
 ##           => provide all backend function for calling API, login...
 ##           => was designed first for Virtual Machines management on Freebox Delta
 ##           => but provide frontend functions for managing:
@@ -18,7 +18,7 @@
 ##               - Virtual Machine API
 ##		 - Filesystem tasks API
 ##
-##   WARNING: curl openssl and websocat are needed - see 'EXTOOLS' after the code 
+##   WARNING: curl openssl and websocat are needed - see 'EXTOOLS' after the code
 ##
 ##   WARNING: lots of changes add been made to the original project (+3000 lines) 
 ##            => See CHANGELOG at the end afer 'EXTOOLS' (after the code)
@@ -26,9 +26,9 @@
 ##
 ##_________________________________________________________________________________________
 ##
-##   This bash library can be used on Internet Home Router & Server from FREE Telecom : 
+##   This bash library can be used on Internet Home Router & Server from FREE Telecom :
 ##    --> French FREEBOX: DELTA - POP - MINI - Revolution - ONE(end of sell 2020-07)
-##    --> Italian ILIADBOX (since 2022-01-25) <=> Italian "Freebox POP" 
+##    --> Italian ILIADBOX (since 2022-01-25) <=> Italian "Freebox POP"
 ##_________________________________________________________________________________________
 ##
 ##   This program / library is provided 'as is' with no warranty - use at your own risks
@@ -61,10 +61,10 @@ ITALY="no"
 _APP_PASSWORD="DefineAStrongPasswordM"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
-# This option require you add a local domain name and a private certificate 
+# This option require you add a local domain name and a private certificate
 # in your freebox / iliadbox in FreeboxOS> parameters > domain names
-# NB: This option MUST be null: "" or commented if you do not use it 
-# NB: Working the same way for ILIADBOX_LAN_URL 
+# NB: This option MUST be null: "" or commented if you do not use it
+# NB: Working the same way for ILIADBOX_LAN_URL
 # As an example to access my box API from my internal LAN domain I set :
 #FREEBOX_LAN_URL="https://fbx.fbx.lan"
 FREEBOX_LAN_URL=""
@@ -86,16 +86,28 @@ ILIADBOX_WAN_URL=""
 # and let us create a Certificate CA Bundle with all declared private rootCA
 # and public CA certificate chain or to fallback to insecure TLS mode (curl -k) 
 
-# Local & private CA certificate used for local domain defined in $FREEBOX_LAN_URL: 
+# WARNING : curl 8 TLS backends (OpenSSL or GNUTLS)
+# curl8 + GNUTLS backend read the bundle of CA certificate by the end where
+# OPENSSL backend read the bundle of certificate by the starting of CA cert file
+
+# WARNING : PKI limitation:
+# You must not use 2 DIFFERENTS CA certificate (LAN + WAN) but with the same CN:
+# in state, it will work with curl8 + openssl backend (the CA certificate
+# of the target URL is positioned first in the cacert bundle) but as curl8 + gnutls
+# read the cacert bundle by the end, in this case you need to change the order of the LAN 
+# and WAN CA certificate in the bundle (dirty but simple: switch LAN and WAN CA certificate 
+# files in the followiing configuration)
+
+# Local & private CA certificate used for local domain defined in $FREEBOX_LAN_URL:
 # NB: Only need this option if your local domain use a certificate from a pivate CA
 # NB: Working the same way for ILIADBOX_LAN_CACERT
-# Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so   
+# Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so  
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
 FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
-# Public or private CA certificate used for public domain defined in $FREEBOX_WAN_URL: 
+# Public or private CA certificate used for public domain defined in $FREEBOX_WAN_URL:
 # NB: Needed when using a public domain certificate from a pivate CA or with a "CA chain"
 # NB: Working the same way for ILIADBOX_LAN_CACERT
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
@@ -238,7 +250,7 @@ Yu11tlZsB2Iw/TT1EyPVb5z6tK4wUgWLNFAvjXU=
 [[ "$ILIADBOX_WAN_CACERT" == "" ]]  && ILIADBOX_WAN_CACERT="/dev/null"
 
 
-# Building a "Root CA certificate bundle" with all 3 Root CA certificate
+# Building a "Root CA certificate bundle" with all 4 Root CA certificate
 # This bundle of CA certificate will be use to connect Freebox API
 FREEBOX_CA_BUNDLE="$(sed '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/!d' $FREEBOX_WAN_CACERT)
 $(sed '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/!d' $FREEBOX_LAN_CACERT)
@@ -272,7 +284,7 @@ ${ILIADBOX_DEFAULT_CACERT}"
 
 
 # Now to avoid changing more than 1000 lines of code, we will assume that if ITALY="yes"
-# FREEBOX_URL=$ILIADBOX_URL  and FREEBOX_CACERT=$ILIADBOX_CA_BUNDLE
+# FREEBOX_URL=$ILIADBOX_URL  and FREEBOX_CA_BUNDLE=$ILIADBOX_CA_BUNDLE
 
 [[ "$ITALY" == "yes" ]] \
 	&& FREEBOX_URL=$ILIADBOX_URL \
@@ -283,8 +295,15 @@ ${ILIADBOX_DEFAULT_CACERT}"
         || BOX="FREEBOX" 
 
 
+####### NBA DETECTING TERMINAL BACKGROUND COLOR #######
+# If terminal background is black, main fonts color would be white
+# If terminal background is white, main fonts color would be black
+read -t .1 -rs -d \\ -p $'\e]11;?\e\\' BG
+grep -q ffff/ffff/ffff <<< $(echo -e "$BG") \
+       && W="[30m" \
+       || W="[37m" 
+ESC="\033"
 
-####### NBA CHECKING CERTIFICATES #######
 # Verifying that FREEBOX_CA_BUNDLE is a valid list of PEM certificate
 # if yes: FREEBOX_CA_BUNDLE will be use to verify freebox domain name TLS certificate 
 # if not: API librairy will fallback to insecure TLS /!\ no certificate check /!\
@@ -293,16 +312,16 @@ check_tool file 2>/dev/null
 CAbdl=$(mktemp /dev/shm/fbx-ca-bundle.XXX)
 echo -e "$FREEBOX_CA_BUNDLE" |grep -v ^$ > ${CAbdl}
 is_cert=$(file ${CAbdl}|cut -d' ' -f2-)
-#cat ${CAbdl}
+#cat ${CAbdl} >&2 | debug
 rm -f ${CAbdl}
-RED='\033[31m' && WHITE='\033[37m' && norm='\033[00m' 
+RED="\033[31m" && WHITE="${ESC}${W}" && norm="\033[00m" 
 [[ "${is_cert}" != "PEM certificate" ]] \
 	&& echo -e "\n${WHITE}ERROR:\t ${RED}${BOX}_CA_BUNDLE is not a list of valid PEM CA certificate${norm}\n" \
 	&& echo -e "${WHITE}WARNING: ${RED}fbx-delta-nba_bash_api.sh library will fallback to insecure TLS ! ${norm}\n" \
 	&& FREEBOX_CACERT='' \
 	|| FREEBOX_CACERT=$FREEBOX_CA_BUNDLE
-#echo -e FREEBOX_CACERT="$FREEBOX_CACERT"  # debug
-#echo -e FREEBOX_URL="$FREEBOX_URL"        # debug
+#echo -e FREEBOX_CACERT="$FREEBOX_CACERT" >&2  # debug
+#echo -e FREEBOX_URL="$FREEBOX_URL" >&2        # debug
 
 # Soring FREEBOX_CACERT in a static variable
 STORE_FREEBOX_CACERT=$FREEBOX_CACERT
@@ -341,6 +360,7 @@ unset CAbdl is_cert
 ###########################################################################################
 
 #######   COLOR    ########
+ESC="\033"
 red='\033[01;31m'
 RED='\033[31m'
 LRED='\033[91m'
@@ -350,20 +370,20 @@ green='\033[01;32m'
 GREEN='\033[32m'
 purpl='\033[01;35m'
 PURPL='\033[35m'
-WHITE='\033[37m'
+WHITE="${ESC}${W}"
 yellow='\033[01;33m'
 YELLOW='\033[33m'
 LBLUE='\033[36m'
 white='\033[01;37m'
 norm='\033[00m'
-
+PINK="${ESC}[38;5;201m"
 
 #######  EXTENDED COLOR (256 COLORS) + 'SED ESC CHAR' ########
 esc_sed="\x1B"
 norm_sed="${esc_sed}[0m"
 red_sed="${esc_sed}[31m"
 lblue_sed="${esc_sed}[36m"
-white_sed="${esc_sed}[37m"
+white_sed="${esc_sed}${W}"
 blue_sed="${esc_sed}[34m"
 green_sed="${esc_sed}[32m"
 purpl_sed="${esc_sed}[35m"
@@ -411,18 +431,25 @@ first_param="${1}"
 if [[ "${first_param}" == "-h" || "${first_param}" == "--h"  || "${first_param}" == "-help" || "${first_param}" == "--help" || "${first_param}" == "h" || "${first_param}" == "help" ]]
         then
 		echo -e "\n${RED}To source all library functions source without parameters (standard use):${WHITE}\nExample: \n\t source ${BASH_SOURCE[0]} ${norm}"
-        	echo -e "\n${RED}Sourcing library with 'help' or 'list' parameters DOES NOT source library ! ${norm}"
+        	echo -e "\n${RED}Sourcing library with 'help', 'list' or 'check' parameters DOES NOT source library ! ${norm}"
                 echo -e "${WHITE}Parameters:\n\t  -h,--h,help,-help,--help\t- print this help${norm}"
                 echo -e "${WHITE}\t  -l,--l,list,-list,--list\t- print a list of all functions of the library${norm}"
+                echo -e "${WHITE}\t  -c,--c,check,-check,--check\t- print a list and check for external tools${norm}"
                 echo -e "${WHITE}Example: \n\t  source ${BASH_SOURCE[0]} --help"
                 echo -e "\t  source ${BASH_SOURCE[0]} --list "
+                echo -e "\t  source ${BASH_SOURCE[0]} --check "
+                echo -e "\n${light_purple_sed}REQUIRED TOOLS: "
+                echo -e "\t  - To get a list of required tools to use this library, see 'EXTERNAL TOOLS'"
+		echo -e "\t    section of the attached ${RED}README.md ${light_purple_sed}file."
+		echo -e "\t    Or you can simply run :"
+                echo -e "${WHITE}\t    source ${BASH_SOURCE[0]} --check "
                 echo -e "\n${light_purple_sed}HELP: "
                 echo -e "\t  - To get help and example, please read the attached ${RED}README.md ${light_purple_sed}file or the code"
 		echo -e "\t  - All frontend functions have their embedded help (run function with no parameters)\n\t${WHITE}    Example: \n\t    source ./fbx-delta-nba_bash_api.sh\n\t    login_freebox \"\$MY_APP_ID\" \"\$MY_APP_TOKEN\" && add_dhcp_static_lease"
-                echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh ${norm}"
+                echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh \n\t  https://github.com/freeboxos/freeboxos-bash-api${norm}"
                 echo -e "\n${light_purple_sed}SUPPORT: \n\t  - Support is availiable @ GitHub.com "
-                echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new${norm}"
-		ctrlc
+                echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new \n\t  https://github.com/freeboxos/freeboxos-bash-api/issues${norm}"
+		ctrlc 2>/dev/null
 fi
 
 ######## LIBRARY FUNCTION LISTING ########
@@ -437,11 +464,71 @@ then
         echo -e "\n${light_purple_sed}FUNCTIONS HELP: "
         echo -e "\t  - To get help and example, please read the attached ${RED}README.md ${light_purple_sed}file or the code"
 	echo -e "\t  - All frontend functions have their embedded help (run function with no parameters)\n\t${WHITE}    Example: \n\t    source ./fbx-delta-nba_bash_api.sh\n\t    login_freebox \"\$MY_APP_ID\" \"\$MY_APP_TOKEN\" && add_dhcp_static_lease"
-        echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh ${norm}"
+        echo -e "\t  ${light_purple_sed}- You can access online help here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh  \n\t  https://github.com/freeboxos/freeboxos-bash-api/issues${norm}"
         echo -e "\n${light_purple_sed}SUPPORT: \n\t  - Support is availiable @ GitHub.com "
-        echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new${norm}"
+        echo -e "\t  - You can open issues here : \n\t${RED}  https://github.com/nbanb/fbx-delta-nba_bash_api.sh/issues/new \n\t  https://github.com/freeboxos/freeboxos-bash-api/issues${norm}"
 	ctrlc
 fi	
+
+if [[ "${first_param}" == "-c" || "${first_param}" == "--c"  || "${first_param}" == "-check" || "${first_param}" == "--check" || "${first_param}" == "check" ]]
+then
+echo -e "\n${RED}Sourcing library with 'check' parameters DOES NOT source library functions ! \nTo source all library functions source without parameters:${WHITE}\nExample: \n\t source ${BASH_SOURCE[0]} ${norm}\n"
+# Testing tools to generate warning
+_CURL=$(which curl)
+_OPENSSL=$(which openssl)
+_FILE=$(which file)
+_COREUTILS=$(which mktemp)
+_WEBSOCAT=$(which websocat)
+_TIGERVNC=$(which xtigervncviewer)
+_JQ=$(which jq)
+
+if [[ "$_OPENSSL" == "" ]] ; then
+echo -e "${WHITE}You MUST install ${RED}'openssl' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/openssl/openssl ${norm}" >&2
+fi
+if [[ "$_CURL" == "" ]] ; then
+echo -e "${WHITE}You MUST install ${RED}'curl' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/curl/curl ${norm}" >&2
+fi
+if [[ "$_FILE" == "" ]] ; then
+echo -e "${WHITE}You MUST install ${RED}'file' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/file/file ${norm}" >&2
+fi
+if [[ "$_COREUTILS" == "" ]] ; then
+echo -e "${WHITE}You MUST install ${RED}'coreutils' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/coreutils/coreutils ${norm}" >&2
+fi
+if [[ "$_WEBSOCAT" == "" ]] ; then
+echo -e "${WHITE}For websocket API usage you MUST install ${PINK}'websocat' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/vi/websocat ${norm}" >&2
+fi
+if [[ "$_TIGERVNC" == "" ]] ; then
+echo -e "${WHITE}For VM usage it is recommended you install ${PINK}'xtigervncviewer' ${WHITE}from your package manager or directly: 
+${WHITE}- https://github.com/TigerVNC/tigervnc ${norm}" >&2
+fi
+if [[ "$_JQ" == "" ]] ; then
+echo -e "${WHITE}For fast parsing it is recommended you install ${GREEN}'jq' ${WHITE}from your package manager or directly: 
+${WHITE}- https://jqlang.github.io/jq/download/ ${norm}" >&2
+fi
+[[ "$_CURL" == "" || "$_OPENSSL" == "" || "$_FILE" == "" || "$_COREUTILS" == "" || "$_JQ" == "" || "$_WEBSOCAT" == "" || "$_TIGERVNC" == "" ]] && echo
+echo -e "${WHITE}Required tools / packages: ${RED}
+	- curl
+	- openssl
+	- file
+	- coreutils
+${WHITE}\nVM Required tools / packages: ${RED}
+	- websocat
+	- xtigervnc ${norm}(providing vncviewer command)
+${WHITE}\nRecommended tools / packages: ${GREEN}
+	- jq
+${WHITE}\nOptional tools / packages: ${LBLUE}
+	- screen
+	- dtach
+${WHITE}
+You can use 'check_tool program' to check if 'program' is installed ${norm}" >&2
+
+ctrlc
+fi
 
 
 ###########################################################################################
@@ -552,14 +639,17 @@ return 0
 # this way 'exit 3x' in check_tool_exit does not disconnect session when sourcing 
 # fbx-delta-nba_bash_api.sh library in another program 
 check_tool () {
-bash -c "source ${BASH_SOURCE[0]} && check_tool_exit $1"
+#bash -c "source ${BASH_SOURCE[0]} && check_tool_exit $1"
+(check_tool_exit $1)
 }
 
 check_tool_jq () {
 # It is recommanded you install 'jq' https://jqlang.github.io/jq/ 
 	JQ=$(which jq)
 } 
-check_tool_jq	
+check_tool_jq
+
+
 ####### NBA PRINT TERMINAL LINE #######
 # terminal dash line (---) autoscale from terminal width or forced width by parameter
 print_term_line () {
@@ -773,7 +863,10 @@ get_json_value_for_key () {
 get_json_value_for_key_jq () {
 if [[ -x $JQ ]]
 then
+	#jq -rc ."${2} // \"\"" <<< "${1}" '
 	jq -rc ."${2}" <<< "${1}" | sed 's/null//g'
+else
+	get_json_value_for_key "${1}" "${2}"	
 fi
 }
 
@@ -791,6 +884,8 @@ dump_json_keys_values_jq () {
 if [[ -x $JQ ]]
 then
 jq  -rc 'def f($p): f($p + (getpath($p) | iterables | keys_unsorted[] |[.])),"\([$p[] | "." + strings // "[\(.)]"] | add[1:] | values) = \(getpath($p))";f([])'  <<< "${1}"     
+else
+	dump_json_keys_values "${1}"
 fi
 }
 
@@ -863,6 +958,7 @@ print_err () {
 _check_freebox_api () {
     local options=("")
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
+    options=(-H "Content-Type: application/json")
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")
@@ -887,16 +983,17 @@ call_freebox_api () {
     local data="${2-}"
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")
     [[ -n "$data" ]] && options+=(-d "$data")
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
 	    && options+=(--cacert "$FREEBOX_CACERT") \
 	    || options+=("-k")
+    #echo curl -s "$url" "${options[@]}" >&2
     answer=$(curl -s "$url" "${options[@]}")
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc
-    #echo "$answer"
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
@@ -907,6 +1004,7 @@ call_freebox_api2 () {
     local data="${2-}"
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")
     [[ -n "$data" ]] && options+=(-d "$data")
     mk_bundle_cert_file fbx-cacert-callapi2                # create CACERT BUNDLE FILE
@@ -929,27 +1027,28 @@ call_freebox_api2 () {
 get_freebox_api () {
     local api_url="$1"
     local data=("${@:2}")
-    local dataget=("")
+    #local dataget=("")
     local options=("")
     local param=""
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")
     [[ -n "$api_url" ]] && options+=(-G)
     [[ -n "$data" ]] \
 	    && for param in ${data[@]} 
     	       	do 
-	       	dataget+=(-d "${param}") 
+		#dataget+=(-d "${param}") 
+		local dataget+=(-d "${param}")
 	       	done
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
 	    && options+=(--cacert "$FREEBOX_CACERT") \
 	    || options+=("-k")
+        #echo -e "curl -s \"$url\" \"${options[@]}\" \"${dataget[@]}\"" >&2 #debug
 	answer=$(curl -s "$url" "${options[@]}" ${dataget[@]})
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc 
-    #echo "$answer"
     echo "${answer}"
-    #echo "curl -s \"$url\" \"${options[@]}\" \"${dataget[@]}\"" >curlvarget # debug
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
 
@@ -960,8 +1059,8 @@ update_freebox_api () {
     local data="${2}"
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] \
-	    && options+=(-H "Content-Type: application/json")\
 	    && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")\
 	    && options+=(-X PUT)
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
@@ -969,12 +1068,10 @@ update_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" # debug
+    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
     answer=$(curl -s "$url" "${options[@]}")
     #_check_success "$answer" || return 1
-    #_check_success "$answer" || ctrlc
     _check_success "${answer}" || ctrlc
-    #echo "$answer"
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
@@ -993,8 +1090,8 @@ add_freebox_api () {
     local data="${2}"
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] \
-	    && options+=(-H "Content-Type: application/json")\
 	    && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")\
 	    && options+=(-X POST)
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
@@ -1002,7 +1099,7 @@ add_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")	    
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" # debug
+    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
     answer=$(curl -s "$url" "${options[@]}")
     if [[ ${action} == "listdisk" ]] 
     then 
@@ -1011,7 +1108,6 @@ add_freebox_api () {
     	    #_check_success "$answer" || return 1
             _check_success "${answer}" || ctrlc
     fi
-    #echo "$answer"
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
@@ -1027,6 +1123,7 @@ del_freebox_api () {
     local data="${2}"
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$_SESSION_TOKEN" ]] \
             && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")\
             && options+=(-X DELETE)
@@ -1035,12 +1132,10 @@ del_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")	    
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" # debug
+    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
     answer=$(curl -s "$url" "${options[@]}")
     #_check_success "$answer" || return 1
-    #_check_success "$answer" || ctrlc
     _check_success "${answer}" || ctrlc
-    #echo "$answer"
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
@@ -1060,16 +1155,18 @@ login_fbx () {
     local answer=
 
     answer=$(call_freebox_api 'login') || return 1
-    #echo answer=$answer
+    #echo answer=$answer  >&2 # debug
     local challenge=$(get_json_value_for_key "$answer" "result.challenge")
-    #echo challenge=$challenge
+    #echo challenge=$challenge  >&2 # debug
     [[ "$(openssl version |cut -d' ' -f2 |sed s/[a-z]//)" != "1.1.1" ]] && \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^SHA1(stdin)= //') || \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
-    #echo password=$password
+    #echo password=$password  >&2 # debug
     answer=$(call_freebox_api '/login/session/' "{\"app_id\":\"${APP_ID}\", \"password\":\"${password}\" }") || return 1
+    #echo -e "${answer}" >&2 # debug
     _SESSION_TOKEN=$(get_json_value_for_key "$answer" "result.session_token")
-    #echo answer=$answer
+    #echo -e "_SESSION_TOKEN=$answer"  >&2 # debug
+    _SESSION_RESULT="${answer}"
 }
 
 # Login to Freebox API - copy of 'login_fbx' - For debugging purpose 
@@ -1086,7 +1183,8 @@ login_fbx2 () {
     #local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
     answer=$(call_freebox_api '/login/session/' "{\"app_id\":\"${APP_ID}\", \"password\":\"${password}\" }") || return 1
     _SESSION_TOKEN=$(get_json_value_for_key "$answer" "result.session_token")
-    echo -e "${answer}"    # debug
+    echo -e "${answer}" >&2   # debug
+    _SESSION_RESULT="${answer}"
 }
 
 logout_freebox () {
@@ -1095,17 +1193,33 @@ logout_freebox () {
 	_check_success $answer \
 		&& echo -e "${RED}Sucessfully logout from ${BOX,,} API !${norm}" \
 		|| return 1
-	#echo -e ${answer     # debug}
+	#echo -e ${answer} >&2    # debug
 }	
 
 # Login to Freebox API and export to subshell _APP_ID and _APP_ENCRYPTED_TOKEN (reused by library)
 login_freebox () {
     local _MY_APP_ID="$1"
     local _MY_APP_TOKEN="$2"
-    
+    local last_param="$3"	
+
+    # check
+    [[ "$#" -lt 2 ]] && echo -e "\n${WHITE}function usage :\n\t\t login_freebox \$_APP_ID \$_APP_TOKEN <optional_param: -h|-a>" && ctrlc
+
+    # login
     login_fbx "$_MY_APP_ID" "$_MY_APP_TOKEN"
     export _APP_ID=${_MY_APP_ID}
     export _APP_ENCRYPTED_TOKEN=$(echo ${_MY_APP_TOKEN}|openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${_APP_PASSWORD} -pbkdf2)
+
+    # extra param
+    if [[ "${last_param}" == "-a" || "${last_param}" == "--a" || "${last_param}" == "-access"  || "${last_param}" == "--access" ]]
+	then
+	list_fbx_access 2>/dev/null
+    elif [[ "${last_param}" == "-h" || "${last_param}" == "--h" || "${last_param}" == "-help"  || "${last_param}" == "--help" ]] 
+	then
+	echo -e "\n${WHITE}function usage :\n\t\t login_freebox \$_APP_ID \$_APP_TOKEN <optional_param>"
+	echo -e "\n${WHITE}optional param :\n\t\t -h /  -help\t\tlogin and print this help\n\t\t--h / --help\t\tlogin and print this help\n\n\t\t -a /  -access\t\tlogin and print application access\n\t\t--a / --access\t\tlogin and print application access\n${norm}"
+    fi
+
 }
 
 # login an app automatically based on login_freebox exported variables _APP_ID and _APP_ENCRYPTED_TOKEN
@@ -1115,7 +1229,7 @@ app_login_freebox () {
 	local _MY_APP_ID=${_APP_ID}
 	local _MY_APP_TOKEN=$(echo "${_APP_ENCRYPTED_TOKEN}"|openssl enc -base64 -d -aes-256-cbc -salt -pass pass:${_APP_PASSWORD} -pbkdf2)
 	source ${BASH_SOURCE[0]}
-	#echo -e "_MY_APP_TOKEN=$_MY_APP_TOKEN \n_MY_APP_ID=$_MY_APP_ID"  # debug
+	#echo -e "_MY_APP_TOKEN=$_MY_APP_TOKEN \n_MY_APP_ID=$_MY_APP_ID" >&2 # debug
 	login_freebox "$_MY_APP_ID" "$_MY_APP_TOKEN" || return 1
 }
 
@@ -1138,6 +1252,39 @@ relogin_freebox () {
 auto_relogin () {
 [[ ! -z "${_APP_ENCRYPTED_TOKEN}" ]] && relogin_freebox
 }	
+
+list_fbx_access () {
+# $_SESSION_RESULT contains applicattion access
+	local LBLUE=$(tput setaf 6)
+	local norm=$(tput sgr0)
+	local listfunc='parental
+			downloader
+			explorer
+			tv
+			wdo
+			player
+			profile
+			camera
+			settings
+			calls
+			home
+			pvr
+			vm
+			contacts'
+	print_term_line 33
+        echo -e "${WHITE}  ACCESS PRIVILEGE: ${LBLUE}$_APP_ID${norm}"
+	print_term_line 33
+	for auth in $listfunc
+	do
+	local authorisation=$(get_json_value_for_key "$_SESSION_RESULT" "result.permissions.$auth")
+	[[ "$authorisation" == "true" ]] \
+		&& local color=$(tput setaf 2) \
+		|| local color=$(tput setaf 1)
+	printf "|${LBLUE}%-20s  %-20s|\n" "control $auth:" "${color}$authorisation${norm}"
+
+	done
+	print_term_line 33
+}
 
 # create application id and application token for login to Freebox API
 authorize_application () {
@@ -1214,8 +1361,30 @@ colorize_output_pretty_json () {
 	#|awk '{if ($0 ~ /^[}\]]/ ) offset-=4; printf "%*c%s\n", offset, " ", $0; if ($0 ~ /^[{\[]/) offset+=4}' \
 }
 
+# Home API send pretty_json answer => converting to normal JSON
+compact_json () {
+	# You MUST pass a "pretty_json" object to this function ! 
+	# => use quotes, for ex: compact_json "$(get_freebox_api home/adapters)" 
+        local result=("${@}")
+	echo -e "${result[@]}" |sed -e 's/^[ \t]*//;s/\": /":/;s/\" : /\":/g' | tr -d "\n$"
+        echo
+	# or
+	#sed -e 's/^[ \t]*//;s/\": /":/;s/\" : /\":/g' <<< $(echo -e "${result[@]}") | tr -d "\n$"
+        #echo
+}
 
-
+compact_json_jq () {
+# You MUST pass a "pretty_json" object to this function ! 
+# => use quotes, for ex: compact_json_jq "$(get_freebox_api home/adapters)" 
+local result=("${@}")
+if [[ -x $JQ ]]
+	then
+	echo -e "${result[@]}" | jq -rc
+else
+	#check_tool jq
+	compact_json "${result[@]}"
+fi
+}
 
 ###########################################################################################
 ## 
@@ -1268,8 +1437,9 @@ error=1
 
 # enc_dl_task_api param error
 [[ "${action}" == "enc" ]] \
-&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|download_url= \t\t# URL to download|hash=\t\t\t# URL of hash file - hash format: MD5SUMS SHAxxxSUMS file or file.md5 or file.shaXXX |download_dir= \t\t# Download directory (will be created if not exist)|filename= \t\t# Name of downloaded file |recursive= \t\t# if set to 'true' download will be recursive|username= \t\t# (Optionnal) remote URL username |password= \t\t# (Optionnal) remote URL password |cookie1= \t\t# (Optionnal) content of HTTP Cookie header - to pass session cookie |cookie2= \t\t# (Optionnal) second HTTP cookie |cookie3= \t\t# (Optionnal) third HTTP cookie${norm}\n" |tr "|" "\n" \
+	&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|download_url= \t\t# URL to download|hash=\t\t\t# URL of hash file - hash format: MD5SUMS SHAxxxSUMS file or file.md5 or file.shaXXX |download_dir= \t\t# Download directory (will be created if not exist)|filename= \t\t# Name of downloaded file |recursive= \t\t# if set to 'true' download will be recursive|username= \t\t# (Optionnal) remote URL username |password= \t\t# (Optionnal) remote URL password |cookie= \t\t# (Optionnal) content of HTTP Cookie header - to pass session cookie |cookie1= \t\t# (Optionnal) second HTTP cookie |cookie2= \t\t# (Optionnal) third HTTP cookie |cookie3= \t\t# (Optionnal) another HTTP cookie${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to create a download task: ${norm}\n${BLUE}download_url= ${norm}\n" \
+&& echo -e "NOTE: ${RED}warning when passing a string with multiple cookies format must be: ${norm}\n${BLUE}cookie='cookie1=XXXX;cookie2=YYYY;cookie3=ZZZ;...cookieN=KKK' \nOr you will have to do something like: cookie=\'\${cookie//; /;}\' ${norm}\n" \
 && echo -e "EXAMPLE (simple):\n${BLUE}${progfunct} download_url=\"https://images.jeedom.com/freebox/freeboxDelta.qcow2\"${norm}\n" \
 && echo -e "EXAMPLE (medium):\n${BLUE}${progfunct} download_url=\"https://images.jeedom.com/freebox/freeboxDelta.qcow2\" hash=\"https://images.jeedom.com/freebox/SHA256SUMS\" download_dir=\"/FBX24T/dl/vmimage/\" filename=\"MyJedomDelta-efi-aarch64-nba0.qcow2\"${norm}\n" \
 && echo -e "EXAMPLE (full):\n${BLUE}${progfunct} download_url=\"https://my-private-mirror.net/freebox/MyPrivateFreeboxVM_Image.qcow2\" hash=\"https://my-private-mirror.net/freebox/MyPrivateFreeboxVM_Image.qcow2.sha512\" download_dir=\"/FBX24T/dl/vmimage/\" filename=\"MyNewVMimage-efi-aarch64.qcow2\" username=\"MyUserName\" password=\"VerySecret\" recursive=\"false\" cookie1=\"MyHTTPsessionCookie\" cookie2=\"MyStickysessionCookie\" cookie3=\"MyAuthTokenCookie\" ${norm}\n" 
@@ -1290,6 +1460,7 @@ error=1
 
 unset prog_cmd list_cmd
 return 1
+#ctrlc
 }
 
 
@@ -1325,6 +1496,7 @@ check_and_feed_dl_param () {
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "download_dir" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "filename" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "recursive" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cookie" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cookie1" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cookie2" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cookie3" \
@@ -1338,6 +1510,7 @@ check_and_feed_dl_param () {
         [[ "${nameparam}" == "download_dir" ]] && p_download_dir="${nameparam}=" && download_dir=${valueparam}
         [[ "${nameparam}" == "filename" ]] && p_filename="${nameparam}=" && filename=${valueparam}
         [[ "${nameparam}" == "recursive" ]] && p_recursive="${nameparam}=" && recursive=${valueparam}
+        [[ "${nameparam}" == "cookie" ]] && p_cookie="${nameparam}=" && cookie=${valueparam}
         [[ "${nameparam}" == "cookie1" ]] && p_cookie1="${nameparam}=" && cookie1=${valueparam}
         [[ "${nameparam}" == "cookie2" ]] && p_cookie2="${nameparam}=" && cookie2=${valueparam}
         [[ "${nameparam}" == "cookie3" ]] && p_cookie3="${nameparam}=" && cookie3=${valueparam}
@@ -1381,12 +1554,13 @@ if [[ "${action}" == "enc" && "${error}" != "1" ]]
 	[[ "${download_dir}" == "" ]] && p_download_dir="" || download_dir=$(echo -n ${download_dir}|base64)
 	[[ "${filename}" == "" ]] && p_filename=""
 	[[ "${recursive}" == "" ]] && p_recursive=""
+	[[ "${cookie}" == "" ]] && p_cookie=""
 	[[ "${cookie1}" == "" ]] && p_cookie1=""
 	[[ "${cookie2}" == "" ]] && p_cookie2=""
 	[[ "${cookie3}" == "" ]] && p_cookie3=""
 	[[ "${username}" == "" ]] && p_username=""
 	[[ "${password}" == "" ]] && p_password=""
-	dl_enc_param_object=("${p_download_url}${download_url} ${p_hash}${hash} ${p_download_dir}${download_dir} ${p_filename}${filename} ${p_username}${username} ${p_password}${password} ${p_cookie1}${cookie1} ${p_cookie2}${cookie2} ${p_cookie3}${cookie3}")
+	dl_enc_param_object=("${p_download_url}${download_url} ${p_hash}${hash} ${p_download_dir}${download_dir} ${p_filename}${filename} ${p_recursive}${recursive} ${p_username}${username} ${p_password}${password} ${p_cookie}${cookie} ${p_cookie1}${cookie1} ${p_cookie2}${cookie2} ${p_cookie3}${cookie3}")
 	#echo -e  "dl_enc_param_object: ${dl_enc_param_object}"
 fi
 
@@ -1419,12 +1593,13 @@ local_direct_dl_api () {
     local options=("")
     local extopts=("--progress-bar --output")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
     [[ -n "$filename" ]] \
 	    && url="${url}/${filename}" \
 	    && local file_target=$(echo ${file_fullpath}|grep -o '[^/]*$') \
 	    || echo -e "\n${RED}file_fullpath parameters missing !${norm}"
     [[ -n "$_SESSION_TOKEN" ]] \
-	    && options=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
+	    && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
 	    && options+=(-X GET)
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
@@ -1450,8 +1625,9 @@ add_dl_task_api () {
     local taskopt=("${@}")
     local options=("")
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/x-www-form-urlencoded")
     [[ -n "$_SESSION_TOKEN" ]] \
-	    && options=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
+	    && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
 	    && options+=(-X POST)
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
@@ -1476,9 +1652,7 @@ list_dl_task_api () {
         local p0="]"
         local status=""
 	[[ "${action}" == "show" ]] && p0="" && TYPE="SHOW DOWNLOADS TASK: ${token}"
-	#local answer=$(call_freebox_api  "/$api_url/" 2>&1)
 	local answer=$(call_freebox_api  "/$api_url/" )
-        #local cache_result=("$(dump_json_keys_values "${answer}")")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -1532,11 +1706,11 @@ list_dl_task_api () {
                 [[ "${status[$i]}" == "error" ]] \
 			&& status[$i]="${RED}${status[$i]}\t" \
 			|| status[$i]="${GREEN}${status[$i]}"
-		#echo -e "status[$i]=${status[$i]}a"
+		#echo -e "status[$i]=${status[$i]}a" >&2 # debug
                 [[ "${status[$i]}" == "${GREEN}done" || "${status[$i]}" == "${GREEN}stopped" ]] \
 			&& status[$i]="${status[$i]}\t" \
 			|| status[$i]="${status[$i]}"
-		#echo -e "status[$i]=${status[$i]}b"
+		#echo -e "status[$i]=${status[$i]}b" >&2 # debug
                 [[ "${error[$i]}" == "none" ]] \
 			&& error[$i]="${GREEN}${error[$i]}" \
 			|| error[$i]="${RED}${error[$i]}"
@@ -1572,14 +1746,15 @@ show_dl_task_api () {
 # function which add a download task and encode param in "www data urlencode" format
 enc_dl_task_api () {
     local api_url="downloads/add"
-    local taskopt=("${@}")
+    local taskopt=("${@}") #; echo -e "${taskopt[@]}\n\n\n" >&2 # debug
     local options=("")
-    local opttask=("")
+    #local opttask=("")
     local param=""
           action=enc
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/x-www-form-urlencoded")
     [[ -n "$_SESSION_TOKEN" ]] \
-	    && options=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
+	    && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN") \
 	    && options+=(-X POST)
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
@@ -1589,11 +1764,12 @@ enc_dl_task_api () {
 	check_and_feed_dl_param ${taskopt[@]}
     	for param in ${dl_enc_param_object[@]}; 
     		do 
-		opttask+=(--data-urlencode $param)
+		#opttask+=(--data-urlencode $param)
+		local opttask+=(--data-urlencode $param)
     	done		
 	if [[ "$error" != "1" ]]
         then
-		#echo curl -s "$url" "${options[@]}" ${opttask[@]}
+		#echo curl -s "$url" "${options[@]}" ${opttask[@]} >&2 #  debug
     		answer=$(curl -s "$url" "${options[@]}" ${opttask[@]})
     		_check_success "$answer" || return 1
     		echo -e "${answer}"
@@ -2854,7 +3030,7 @@ check_if_domain () {
 # testing if *url* is a valid url : 
 check_if_url () { 
 	local url="${1}"
-        [[ ${url} =~ ^(((http|https|ftp|ftps|ftpes|sftp|ws|wss):\/\/|)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+        [[ ${url} =~ ^(((http|https|ftp|ftps|ftpes|sftp|ws|wss|rtsp):\/\/|)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
         || return 1
 }
 
@@ -4991,6 +5167,7 @@ domain_addcert () {
 list_player () {
 local idpla=0
 answer=$(get_freebox_api player)
+        print_term_line 100 
         echo -e "\t\t\t${WHITE}ID, PLAYER NAME, PLAYER MODEL, PLAYER API VERSION${norm}"
         print_term_line 100 
 
@@ -5022,6 +5199,7 @@ auto_relogin && list_player
 list_repeater () {
 local idrep=0
 answer=$(get_freebox_api repeater)
+        print_term_line 105 
         echo -e "\t\t\t${WHITE}ID, REPEATER NAME, REPEATER MODEL, REPEATER API VERSION${norm}"
         print_term_line 105 
 
@@ -5048,6 +5226,209 @@ answer=$(get_freebox_api repeater)
 
 repeater_list () {
 auto_relogin && list_repeater
+}
+
+
+
+list_freeplug () {
+local idfre=0 idmem=0
+#answer=$(cat ./_test_freeplug.json | jq -rc) # NBA debug
+answer=$(get_freebox_api freeplug)
+
+        print_term_line 106 
+        echo -e "${WHITE}FREEPLUG NETWORK \t\t ID \t     STATE\tSPEED\t\tMODEL \t    ROLE\tRATE${norm}"
+        print_term_line 106 
+
+	# caching results
+	dump_json_keys_values "$answer" >/dev/null
+	while [[ $(get_json_value_for_key "$answer" "result[$idfre].id") != "" ]] 
+        do
+        local net[$idfre]=$(get_json_value_for_key "$answer" "result[$idfre].id")
+		while [[ $(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].id") != "" ]]
+		do       	
+        	local mid[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].id")
+        	local eth[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].eth_port_status")
+        	local speed[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].eth_speed")
+        	local role[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].net_role")
+        	local model[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].model")
+        	local rate[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].rx_rate")
+
+        	#local eth[$idmem]="down" # NBA debug
+        	[[ "${eth[$idmem]}" != 'up' ]] \
+        	        && echo -e "${light_purple_sed}${net[$idfre]}${PURPL}  ${WHITE}id: ${RED}${mid[$idmem]}  ${WHITE}eth: ${RED}${eth[$idmem]}${norm}  ${WHITE}speed: ${RED}${speed[$idmem]}${norm}  ${WHITE}model: ${norm}${RED}${model[$idmem]}${norm}  ${WHITE}role: ${norm}${RED}${role[$idmem]}${norm}  ${WHITE}rate:${norm} ${RED}${rate[$idmem]}${norm}" \
+        	        || echo -e "${light_purple_sed}${net[$idfre]}${BLUE}  ${WHITE}id: ${GREEN}${mid[$idmem]}  ${WHITE}eth: ${GREEN}${eth[$idmem]}${norm}  ${WHITE}speed: ${GREEN}${speed[$idmem]}${norm}  ${WHITE}model: ${norm}${GREEN}${model[$idmem]}${norm}  ${WHITE}role: ${norm}${GREEN}${role[$idmem]}${norm}  ${WHITE}rate:${norm} ${GREEN}${rate[$idmem]}${norm}"  
+
+        		((idmem++))
+		done
+        	((idfre++))
+        done
+}
+
+freeplug_list () {
+auto_relogin && list_freeplug
+}
+
+
+list_wifi-ap () {
+local idwap=0
+# part 1: GLOBAL STATUS
+answer=$(get_freebox_api wifi/state)
+        print_term_line 105 
+        echo -e "\t\t\t${WHITE}\t\t\tWIFI GLOBAL STATE${norm}"
+        print_term_line 105 
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+	local glob_status=$(get_json_value_for_key "${answer}" "result.state")
+	local glob_powser_saving=$(get_json_value_for_key "${answer}" "result.power_saving_capability")
+	local radio_count=$(echo -e "${cache_result[@]}" |egrep "result.expected_phys\[[0-9]\].phy_id" |wc -l)
+	[[ "${glob_status}" != 'enabled' ]] \
+	&& echo -e "${light_purple_sed}WIFI STATUS: ${RED}${glob_status}${norm}" \
+	|| echo -e "${light_purple_sed}WIFI STATUS: ${GREEN}${glob_status}${norm}"
+	[[ "${glob_powser_saving}" != 'supported' ]] \
+	&& echo -e "${light_purple_sed}POWER SAVE:  ${RED}${glob_powser_saving}${norm}" \
+	|| echo -e "${light_purple_sed}POWER SAVE:  ${GREEN}${glob_powser_saving}${norm}"
+	[[ "${radio_count}" -eq '0' ]] \
+	&& echo -e "${light_purple_sed}RADIO COUNT: ${RED}${radio_count}${norm}" \
+	|| echo -e "${light_purple_sed}RADIO COUNT: ${GREEN}${radio_count}${norm}"
+        print_term_line 105 
+
+# part 2: RADIO AP STATUS
+answer=$(get_freebox_api wifi/ap)
+        echo -e "\t\t\t${WHITE}AP ID, NAME, BAND, STATE, WIDTH, PRIMARY CHANNEL, SECONDARY CHANNEL${norm}"
+        print_term_line 105 
+	#dump_json_keys_values "$answer" >/dev/null
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+	#echo -e "${cache_result[@]}"  |grep ""
+	while [[ $(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].id") != "" ]] 
+        do
+        local id[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].id"|cut -d' ' -f3)
+        local name[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].name"|cut -d' ' -f3)
+        local state[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].status.state"|cut -d' ' -f3)
+        local width[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].status.channel_width"|cut -d' ' -f3)
+        local band[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].config.band"|cut -d' ' -f3)
+        local pchan[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].status.primary_channel"|cut -d' ' -f3)
+        local schan[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].status.secondary_channel"|cut -d' ' -f3)
+
+        if [[ "${state[$idwap]}" == 'active' ]] 
+	then
+	echo -e "${light_purple_sed}AP-${RED}${id[$idwap]} ${WHITE}id: ${GREEN}${id[$idwap]}  ${WHITE}name: ${GREEN}${name[$idwap]}${norm} \t${WHITE} band: ${GREEN}${band[$idwap]}${norm} ${WHITE}\twidth: ${norm}${GREEN}${width[$idwap]}${norm}  ${WHITE}\tchan:${norm} ${GREEN}${pchan[$idwap]},${schan[$idwap]}${norm} ${WHITE}\tstate: ${norm}${GREEN}${state[$idwap]}${norm}"	
+	elif [[ "${state[$idwap]}" == 'dfs' \
+		|| "${state[$idwap]}" == 'scanning' \
+		|| "${state[$idwap]}" == 'acs' \
+		|| "${state[$idwap]}" == 'ht_scan' ]]
+	then
+        echo -e "${light_purple_sed}AP-${RED}${id[$idwap]}${BLUE} ${WHITE}id: ${BLUE}${id[$idwap]}  ${WHITE}name: ${BLUE}${name[$idwap]}${norm} \t${WHITE} band: ${BLUE}${band[$idwap]}${norm} ${WHITE}\twidth: ${norm}${BLUE}scan${norm}  ${WHITE}\tchan:${norm} ${BLUE}scan${norm} ${WHITE}\tstate: ${norm}${BLUE}${state[$idwap]}${norm}"
+	elif [[ "${state[$idwap]}" == 'starting' \
+		|| "${state[$idwap]}" == 'stopping' ]]
+	then	
+        echo -e "${light_purple_sed}AP-${RED}${id[$idwap]}${PURPL} ${WHITE}id: ${PURPL}${id[$idwap]}  ${WHITE}name: ${PURPL}${name[$idwap]}${norm} \t${WHITE} band: ${PURPL}${band[$idwap]}${norm} ${WHITE}\twidth: ${norm}${PURPL}null${norm}  ${WHITE}\tchan:${norm} ${PURPL}null${norm} ${WHITE}\tstate: ${norm}${PURPL}${state[$idwap]}${norm}"
+	elif [[ "${state[$idwap]}" == 'no_param' \
+		|| "${state[$idwap]}" == 'bad_param' \
+		|| "${state[$idwap]}" == 'no_active_bs' \
+		|| "${state[$idwap]}" == 'disabled' \
+		|| "${state[$idwap]}" == 'disabled_planning' \
+		|| "${state[$idwap]}" == 'disabled_power_saving' \
+		|| "${state[$idwap]}" == 'failed' ]] 
+	then
+        echo -e "${light_purple_sed}AP-${RED}${id[$idwap]} ${WHITE}id: ${RED}${id[$idwap]}  ${WHITE}name: ${RED}${name[$idwap]}${norm} \t${WHITE} band: ${RED}${band[$idwap]}${norm} ${WHITE}\twidth: ${norm}${RED}null${norm}  ${WHITE}\tchan:${norm} ${RED}null${norm} ${WHITE}\tstate: ${norm}${RED}${state[$idwap]}${norm}" 
+	fi
+       ((idwap++))
+       done
+}
+
+wifi-ap_list () {
+auto_relogin && list_wifi-ap
+}
+
+
+list_storage () {
+local idsto=0
+# part 1: DISK STATUS
+answer=$(get_freebox_api storage/disk)
+        print_term_line 126 
+	echo -e "\t\t${WHITE}DISK ID, TYPE, TABLE, STATE, SIZE (GB), SERIAL, MODEL, ${GREEN}ONLINE ${WHITE}/ ${PURPL}OFFLINE${norm}"
+        print_term_line 126 
+	#dump_json_keys_values "$answer" >/dev/null
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+	#echo -e "${cache_result[@]}"  |grep ""
+	local count=0
+	while [[ $(echo -e "${cache_result[@]}" |egrep -w "result\[$idsto\].id") != "" ]] 
+        do
+        local id[$idsto]=$(echo -e "${cache_result[@]}" |egrep -w "result\[$idsto\].id"|cut -d' ' -f3)
+        local type[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].type"|cut -d' ' -f3)
+        local table[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].table_type"|cut -d' ' -f3)
+        local state[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].state"|cut -d' ' -f3)
+        local size[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].total_bytes"|cut -d' ' -f3)
+        local serial[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].serial"|cut -d' ' -f3)
+        local model[$idsto]=$(echo -e "${cache_result[@]}" |egrep "result\[$idsto\].model"|cut -d' ' -f3-)
+
+	size[$idsto]=$(echo $((${size[$idsto]}/1000/1000/1000)))
+        [[ "${serial[$idsto]}" == '' ]] && serial[$idsto]="UNKNOWN SERIAL "
+        [[ "${model[$idsto]}" == '' ]] && model[$idsto]="UNKNOWN MODEL "
+        [[ "${table[$idsto]}" != 'superfloppy' ]] && table[$idsto]="${table[$idsto]}\t"
+
+        if [[ "${state[$idsto]}" == 'enabled' ]] 
+	then
+	echo -e "${light_purple_sed}DISK-${RED}${count} ${WHITE}id: ${GREEN}${id[$idsto]}  ${WHITE}type: ${GREEN}${type[$idsto]}${norm}${WHITE}\ttable: ${GREEN}${table[$idsto]}${norm} ${WHITE}\tsize: ${norm}${GREEN}${size[$idsto]} G${norm}  ${WHITE}\tserial:${norm} ${GREEN}${serial[$idsto]}${norm} ${WHITE}model: ${norm}${GREEN}${model[$idsto]}${norm}"	
+	else
+	echo -e "${light_purple_sed}DISK-${RED}${count} ${WHITE}id: ${PURPL}${id[$idsto]}  ${WHITE}type: ${PURPL}${type[$idsto]}${norm}${WHITE}\ttable: ${PURPL}${table[$idsto]}${norm} ${WHITE}\tsize: ${norm}${PURPL}${size[$idsto]} G${norm}  ${WHITE}\tserial:${norm} ${PURPL}${serial[$idsto]}${norm} ${WHITE}model: ${norm}${PURPL}${model[$idsto]}${norm}"	
+	fi
+       ((idsto++))
+       ((count++))
+       done
+       
+}
+
+storage_list () {
+auto_relogin && list_storage
+}
+
+list_partition () {
+local idpar=0
+# part 1: DISK STATUS
+answer=$(get_freebox_api storage/partition)
+        print_term_line 126 
+	echo -e "\t\t${WHITE}DISK ID, PARTITION ID, TYPE, SIZE (GiB), USED, FREE, LABEL, ${GREEN}MOUNTED ${WHITE}/ ${PURPL}UNMOUNTED${norm}"
+        print_term_line 126 
+	#dump_json_keys_values "$answer" >/dev/null
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+	local count=0
+	while [[ $(echo -e "${cache_result[@]}" |egrep -w "result\[$idpar\].id") != "" ]] 
+        do
+        local id[$idpar]=$(echo -e "${cache_result[@]}" |egrep -w "result\[$idpar\].id"|cut -d' ' -f3)
+        local did[$idpar]=$(echo -e "${cache_result[@]}" |egrep -w "result\[$idpar\].disk_id"|cut -d' ' -f3)
+        local fstype[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].fstype"|cut -d' ' -f3)
+        local state[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].state"|cut -d' ' -f3)
+        local size[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].total_bytes"|cut -d' ' -f3)
+        local usize[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].used_bytes"|cut -d' ' -f3)
+        local fsize[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].free_bytes"|cut -d' ' -f3)
+        local label[$idpar]=$(echo -e "${cache_result[@]}" |egrep "result\[$idpar\].label"|cut -d' ' -f3-)
+
+	size[$idpar]=$(echo $((${size[$idpar]}/1024/1024/1024)))
+	fsize[$idpar]=$(echo $((${fsize[$idpar]}/1024/1024/1024)))
+	usize[$idpar]=$(echo $((${usize[$idpar]}/1024/1024/1024)))
+
+        if [[ "${state[$idpar]}" == 'mounted' ]] 
+	then
+	echo -e "${light_purple_sed}PART-${RED}${count} ${WHITE}id: ${GREEN}${id[$idpar]} ${WHITE}dsk: ${GREEN}${did[$idpar]}  ${WHITE}type: ${GREEN}${fstype[$idpar]}${norm}${WHITE}\tsize: ${GREEN}${size[$idpar]} G ${WHITE}\tused: ${norm}${GREEN}${usize[$idpar]} G${norm}  ${WHITE}\tfree:${norm} ${GREEN}${fsize[$idpar]} G ${norm}${WHITE}\tlabel: ${norm}${GREEN}${label[$idpar]}${norm}"	
+	else
+	echo -e "${light_purple_sed}PART-${RED}${count} ${WHITE}id: ${PURPL}${id[$idpar]} ${WHITE}dsk: ${PURPL}${did[$idpar]}  ${WHITE}type: ${PURPL}${fstype[$idpar]}${norm}${WHITE}\tsize: ${PURPL}${size[$idpar]} G ${WHITE}\tused: ${norm}${PURPL}${usize[$idpar]} G${norm}  ${WHITE}\tfree:${norm} ${PURPL}${fsize[$idpar]} G ${norm}${WHITE}\tlabel: ${norm}${PURPL}${label[$idpar]}${norm}"	
+	fi
+       ((idpar++))
+       ((count++))
+       done
+       
+}
+
+partition_list () {
+auto_relogin && list_partition
 }
 
 
@@ -5193,8 +5574,10 @@ _check_freebox_api
 ## external program needed : 
 ## --> cURL (curl)
 ## --> openssl                               <--# should already be installed on your system
-## --> tigervnc-viewer (to provide 'vncviewer' command)
+## --> coreutils                             <--# should already be installed on your system
+## --> file 
 ## --> websocat (see "websocat install")
+## --> tigervnc-viewer (to provide 'vncviewer' command)
 ## --> GNU screen (optionnal only)
 ## --> GNU detach (optionnal only)
 ## --> Command from GNU coreutils, util-linux (or similar UNIX package) are used in this library:
@@ -5203,7 +5586,7 @@ _check_freebox_api
 ##
 ##______________________________
 ## websocat install :
-## --> install instruction: ./fbx-delta-nba_bash_api.sh && 'check_tool websocat' 
+## --> install instruction: source ./fbx-delta-nba_bash_api.sh && 'check_tool websocat' 
 ##
 ##______________________________
 ## websocat build (optionnal) :
@@ -5647,7 +6030,46 @@ _check_freebox_api
 # --> updating README.md
 #
 #__________
-#20241023
+#20241025
 # --> adding check command file and mktemp 
 # --> updating check_tool_exit function
+#
+#__________
+#20241027
+# --> adding 'rtsp' support in check_if_url() function  
+# --> adding freeplug listing function
+#
+#__________
+#20241028
+# --> adding wifi radio listing function
+# --> adding support of white terminal background color (default is black background)
+#
+#__________
+#20241029
+# --> adding compact_json and compact_json_jq functions (home API answer form is pretty_json!)
+# --> adding 'check' sourcing parameter to check and display required external tools
+# --> updating 'help' section
+#
+#__________
+#20241102
+# --> fixing 'recursive issue' in enc_dl_task_api() function
+# --> adding help on how a string of cookie can be pass to cookie variable in enc_dl_task_api()
+#
+#__________
+#20241115
+# --> adding list_fbx_access() to list application access authorisation
+# --> adding "--access' param to login_freebox(): print application authorisation after login
+# --> adding terminal background color detection
+#
+#__________
+#20241117
+# --> adding support of curl8 with GNUTLS or OPENSSL backend
+# --> fixing array fullfilling issue (empty first cell of parameters array refused by curl8)
+# --> Adding bundle cacert warning for curl8 GNUTLS backend
+#
+#__________
+#20241118
+# --> adding physical storage listing function
+# --> adding storage partition listing function
+# 
 #
