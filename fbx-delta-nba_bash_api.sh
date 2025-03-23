@@ -59,7 +59,7 @@ ITALY="no"
 # here you need to put a strong password used to protect your "app-token" in the session
 # As an example here is the password I'm using to protect my token in the session
 #_APP_PASSWORD="DefineAStrongPasswordM"
-_APP_PASSWORD="NMZ7kTRv+wWow9M"
+_APP_PASSWORD="NMZ7R7zkTRv+wWow9H"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
 # This option require you add a local domain name and a private certificate
@@ -67,7 +67,7 @@ _APP_PASSWORD="NMZ7kTRv+wWow9M"
 # NB: This option MUST be null: "" or commented if you do not use it
 # NB: Working the same way for ILIADBOX_LAN_URL
 # As an example to access my box API from my internal LAN domain I set :
-FREEBOX_LAN_URL="https://fbx.fbx.lan"
+FREEBOX_LAN_URL=""
 #FREEBOX_LAN_URL=""
 ILIADBOX_LAN_URL=""
 
@@ -78,7 +78,7 @@ ILIADBOX_LAN_URL=""
 # NB: Working the same way for ILIADBOX_WAN_URL
 # As an example to access my box API from WAN I set :
 # FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
-FREEBOX_WAN_URL="https://fbx.mydomain.net:2011"
+FREEBOX_WAN_URL=""
 #FREEBOX_WAN_URL=""
 ILIADBOX_WAN_URL=""
 
@@ -106,7 +106,7 @@ ILIADBOX_WAN_URL=""
 # Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so  
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
-FREEBOX_LAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-2024-4096.pem"
+FREEBOX_LAN_CACERT=""
 #FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
@@ -116,7 +116,7 @@ ILIADBOX_LAN_CACERT=""
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
 # for example to access my box API from my WAN domain and my WAN private PKI I set:
 #FREEBOX_WAN_CACERT="/usr/share/ca-certificates/user/my-public-domain-rootCA.pem"
-FREEBOX_WAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA8192.pem"
+FREEBOX_WAN_CACERT=""
 #FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
 
