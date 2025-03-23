@@ -21,11 +21,19 @@ fbx-delta-nba_bash_api.sh
 
 
 - ### 100% BASH  
-- ### APIv12 (FREEBOX) / APIv12 (PLAYER)
+- ### APIv14 (FREEBOX) / APIv14 (PLAYER)
 - ### USE AT YOUR OWN RISK
 
 
 <br/>
+
+_________________________________________
+
+- ### NOTE (20250323):  $${\color{red}\text{  Adding file and directory upload over websocket support: }}$$
+- ##### FRONTEND FUNCTION (upload files / directory): local_direct_ul_api
+  
+- ### NOTE (20250323):  $${\color{purple}\text{  The library now support --debug / --trace options }}$$
+
 
 _________________________________________
 

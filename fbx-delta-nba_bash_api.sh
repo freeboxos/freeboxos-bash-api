@@ -20,7 +20,7 @@
 ##
 ##   WARNING: curl openssl and websocat are needed - see 'EXTOOLS' after the code
 ##
-##   WARNING: lots of changes add been made to the original project (+3000 lines) 
+##   WARNING: lots of changes add been made to the original project (+6000 lines) 
 ##            => See CHANGELOG at the end afer 'EXTOOLS' (after the code)
 ##
 ##
@@ -58,7 +58,8 @@ ITALY="no"
 # Support of auto relogin (necessary for long monitoring tasks)
 # here you need to put a strong password used to protect your "app-token" in the session
 # As an example here is the password I'm using to protect my token in the session
-_APP_PASSWORD="DefineAStrongPasswordM"
+#_APP_PASSWORD="DefineAStrongPasswordM"
+_APP_PASSWORD="NMZ7kTRv+wWow9M"
 
 # Freebox local URL (optional, used if set and if $FREEBOX_WAN_URL not set)
 # This option require you add a local domain name and a private certificate
@@ -66,8 +67,8 @@ _APP_PASSWORD="DefineAStrongPasswordM"
 # NB: This option MUST be null: "" or commented if you do not use it
 # NB: Working the same way for ILIADBOX_LAN_URL
 # As an example to access my box API from my internal LAN domain I set :
-#FREEBOX_LAN_URL="https://fbx.fbx.lan"
-FREEBOX_LAN_URL=""
+FREEBOX_LAN_URL="https://fbx.fbx.lan"
+#FREEBOX_LAN_URL=""
 ILIADBOX_LAN_URL=""
 
 # Freebox WAN URL (optional, will be used if set)
@@ -77,7 +78,8 @@ ILIADBOX_LAN_URL=""
 # NB: Working the same way for ILIADBOX_WAN_URL
 # As an example to access my box API from WAN I set :
 # FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
-FREEBOX_WAN_URL=""
+FREEBOX_WAN_URL="https://fbx.mydomain.net:2011"
+#FREEBOX_WAN_URL=""
 ILIADBOX_WAN_URL=""
 
 
@@ -104,7 +106,8 @@ ILIADBOX_WAN_URL=""
 # Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so  
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
-FREEBOX_LAN_CACERT=""
+FREEBOX_LAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-2024-4096.pem"
+#FREEBOX_LAN_CACERT=""
 ILIADBOX_LAN_CACERT=""
 
 # Public or private CA certificate used for public domain defined in $FREEBOX_WAN_URL:
@@ -113,8 +116,26 @@ ILIADBOX_LAN_CACERT=""
 # Here my $FREEBOX_WAN_URL certificate had been signed by my private RSA8192 CA, so
 # for example to access my box API from my WAN domain and my WAN private PKI I set:
 #FREEBOX_WAN_CACERT="/usr/share/ca-certificates/user/my-public-domain-rootCA.pem"
-FREEBOX_WAN_CACERT=""
+FREEBOX_WAN_CACERT="/usr/share/ca-certificates/nba/14rv-rootCA-RSA8192.pem"
+#FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
+
+# Config file:
+# You can provide a configuration file overriding 4 configured values of this library 
+# NB: FREEBOX_URL will override FREEBOX_LAN_URL and FREEBOX_WAN_URL 
+# NB: FREEBOX_CACERT will override FREEBOX_LAN_CACERT and FREEBOX_WAN_CACERT
+# NB: FREEBOX_URL should be used with FREEBOX_CACERT
+# NB: config file must only contains values you want to override
+##------ overridable values ------#
+# _ITALY=               # value: yes (iliadbox) or no (freebox)
+# _PASSWORD=            # value: define a strong password
+# _FREEBOX_URL=         # value: define an alternative URL to use
+# _FREEBOX_CACERT=      # value: define an alternative CA certificate file to use
+##------ overridable values ------#
+
+#_CONFIG_FILE=./nbacfg
+_CONFIG_FILE=
+
 
 
 #-------------------------END OF USER CONFIGURABLE OPTIONS -------------------------#
@@ -236,6 +257,31 @@ Yu11tlZsB2Iw/TT1EyPVb5z6tK4wUgWLNFAvjXU=
 ## 
 ###########################################################################################
 
+#-------------------------------- CONFIG FILE OVERRIDE ----------------------------------#
+
+## IF _CONFIG_FILE is provided, it will override previously configured values
+[[ "${_CONFIG_FILE}" != "" ]] && [[ -f "${_CONFIG_FILE}" ]] && source ${_CONFIG_FILE}
+[[ "${debug}" == "1" ]] && echo "source ${_CONFIG_FILE}"
+[[ "${debug}" == "1" &&  -f "${_CONFIG_FILE}" ]] && cat "${_CONFIG_FILE}"
+
+[[ "${_ITALY}" != "" ]] \
+	&& if [[ "${_ITALY}" == "yes" || "${_ITALY}" == "no" ]]; then ITALY=${_ITALY}; fi
+[[ "${_PASSWORD}" != "" ]] \
+	&& if [[ "${_PASSWORD}" =~ [[:print:]] ]]; then _APP_PASSWORD=${_PASSWORD}; fi
+[[ "${_FREEBOX_URL}" != "" ]] \
+	&& if [[ "${_FREEBOX_URL}" =~ ^https\:// ]]
+	then 
+	FREEBOX_WAN_URL=${_FREEBOX_URL}
+	FREEBOX_LAN_URL=${_FREEBOX_URL}
+	fi
+[[ "${_FREEBOX_CACERT}" != "" ]] \
+	&& if [[ -f "${_FREEBOX_CACERT}" ]]
+	then 
+	FREEBOX_WAN_CACERT=${_FREEBOX_CACERT}
+	FREEBOX_LAN_CACERT=${_FREEBOX_CACERT}
+	fi
+
+#------------------------------ END OF CONFIG FILE OVERRIDE ------------------------------#
 
 ## Resetting CA certificate to null: "" when URL is null
 [[ "$FREEBOX_LAN_URL" == "" ]]  && FREEBOX_LAN_CACERT=""
@@ -298,10 +344,14 @@ ${ILIADBOX_DEFAULT_CACERT}"
 ####### NBA DETECTING TERMINAL BACKGROUND COLOR #######
 # If terminal background is black, main fonts color would be white
 # If terminal background is white, main fonts color would be black
-read -t .1 -rs -d \\ -p $'\e]11;?\e\\' BG
+detect_term_bg_color () {
+# timeout '-t 0.1' or '-t 0.01' is too short for old machines or weak CPU speed 	
+read -t 0.2 -rs -d \\ -p $'\e]11;?\e\\' BG  
 grep -q ffff/ffff/ffff <<< $(echo -e "$BG") \
-       && W="[30m" \
-       || W="[37m" 
+       && W='[30m' \
+       || W='[37m' 
+}      
+detect_term_bg_color 2>&1 >/dev/null
 ESC="\033"
 
 # Verifying that FREEBOX_CA_BUNDLE is a valid list of PEM certificate
@@ -312,7 +362,7 @@ check_tool file 2>/dev/null
 CAbdl=$(mktemp /dev/shm/fbx-ca-bundle.XXX)
 echo -e "$FREEBOX_CA_BUNDLE" |grep -v ^$ > ${CAbdl}
 is_cert=$(file ${CAbdl}|cut -d' ' -f2-)
-#cat ${CAbdl} >&2 | debug
+[[ "${debug}" == "1" ]] && cat ${CAbdl} >&2 
 rm -f ${CAbdl}
 RED="\033[31m" && WHITE="${ESC}${W}" && norm="\033[00m" 
 [[ "${is_cert}" != "PEM certificate" ]] \
@@ -320,8 +370,9 @@ RED="\033[31m" && WHITE="${ESC}${W}" && norm="\033[00m"
 	&& echo -e "${WHITE}WARNING: ${RED}fbx-delta-nba_bash_api.sh library will fallback to insecure TLS ! ${norm}\n" \
 	&& FREEBOX_CACERT='' \
 	|| FREEBOX_CACERT=$FREEBOX_CA_BUNDLE
-#echo -e FREEBOX_CACERT="$FREEBOX_CACERT" >&2  # debug
-#echo -e FREEBOX_URL="$FREEBOX_URL" >&2        # debug
+[[ "${debug}" == "1" ]] \
+&& echo -e FREEBOX_CACERT="$FREEBOX_CACERT" >&2 \
+&& echo -e FREEBOX_URL="$FREEBOX_URL" >&2
 
 # Soring FREEBOX_CACERT in a static variable
 STORE_FREEBOX_CACERT=$FREEBOX_CACERT
@@ -351,7 +402,12 @@ unset CAbdl is_cert
 # ex : prog_cmd="fbxvm-ctrl add dhcp"  listcmd="fbxvm-ctrl list dhcp"
 # => output of function param_dhcp_err will say : 
 # error in "fbxvm-ctrl add dhcp" instead of error in "param_dhcp_err"
+#
+# ${pretty} --> global - if pretty=0 --> no pretty output 
+# ${pretty} --> global - if pretty!=0 --> pretty output 
 
+# ${debug} --> global - debug=1 => debug output: enabled by '--debug' 
+# ${debug} --> global - debug=2 => some functions dump complexe parsed json (set it manualy)
 
 ###########################################################################################
 ## 
@@ -377,6 +433,11 @@ LBLUE='\033[36m'
 white='\033[01;37m'
 norm='\033[00m'
 PINK="${ESC}[38;5;201m"
+GREY="${ESC}[38;5;241m"
+LPURP="${ESC}[38;5;147m"
+LLBLUE="${ESC}[38;5;31m"
+LGREEN="${ESC}[38;5;46m"
+LORANGE="${ESC}[38;5;214m"
 
 #######  EXTENDED COLOR (256 COLORS) + 'SED ESC CHAR' ########
 esc_sed="\x1B"
@@ -390,6 +451,7 @@ purpl_sed="${esc_sed}[35m"
 yellow_sed="${esc_sed}[33m"
 pink_sed="${esc_sed}[38;5;201m"
 light_purple_sed="${esc_sed}[38;5;147m"
+light_or_sed="${esc_sed}[38;5;214m"
 
 
 #######  STATIC  #######
@@ -435,7 +497,11 @@ if [[ "${first_param}" == "-h" || "${first_param}" == "--h"  || "${first_param}"
                 echo -e "${WHITE}Parameters:\n\t  -h,--h,help,-help,--help\t- print this help${norm}"
                 echo -e "${WHITE}\t  -l,--l,list,-list,--list\t- print a list of all functions of the library${norm}"
                 echo -e "${WHITE}\t  -c,--c,check,-check,--check\t- print a list and check for external tools${norm}"
+                echo -e "${WHITE}\t  -d,--d,debug,-debug,--debug\t- source library ${RED}and enable debug mode ${norm}"
+                echo -e "${WHITE}\t  -t,--t,trace,-trace,--trace\t- source library ${RED}and enable trace debug mode ${norm}"
                 echo -e "${WHITE}Example: \n\t  source ${BASH_SOURCE[0]} --help"
+                echo -e "\t  source ${BASH_SOURCE[0]} --debug "
+                echo -e "\t  source ${BASH_SOURCE[0]} --trace "
                 echo -e "\t  source ${BASH_SOURCE[0]} --list "
                 echo -e "\t  source ${BASH_SOURCE[0]} --check "
                 echo -e "\n${light_purple_sed}REQUIRED TOOLS: "
@@ -470,6 +536,7 @@ then
 	ctrlc
 fi	
 
+######## LIBRARY FUNCTION CHECK REQUIREMENTS ########
 if [[ "${first_param}" == "-c" || "${first_param}" == "--c"  || "${first_param}" == "-check" || "${first_param}" == "--check" || "${first_param}" == "check" ]]
 then
 echo -e "\n${RED}Sourcing library with 'check' parameters DOES NOT source library functions ! \nTo source all library functions source without parameters:${WHITE}\nExample: \n\t source ${BASH_SOURCE[0]} ${norm}\n"
@@ -516,12 +583,13 @@ echo -e "${WHITE}Required tools / packages: ${RED}
 	- openssl
 	- file
 	- coreutils
-${WHITE}\nVM Required tools / packages: ${RED}
+${WHITE}\nVM + Monitor + Upload Required tools / packages: ${RED}
 	- websocat
+${WHITE}\nVM (only) Required tools / packages: ${RED}
 	- xtigervnc ${norm}(providing vncviewer command)
 ${WHITE}\nRecommended tools / packages: ${GREEN}
 	- jq
-${WHITE}\nOptional tools / packages: ${LBLUE}
+${WHITE}\nOptional (VM only) tools / packages: ${LBLUE}
 	- screen
 	- dtach
 ${WHITE}
@@ -529,6 +597,23 @@ You can use 'check_tool program' to check if 'program' is installed ${norm}" >&2
 
 ctrlc
 fi
+
+######## LIBRARY FUNCTION DEBUG MODE ########
+if [[ "${first_param}" == "-d" || "${first_param}" == "--d"  || "${first_param}" == "-debug" || "${first_param}" == "--debug" || "${first_param}" == "debug" ]]
+then
+	debug=1
+	echo -e "${RED}DEBUG MODE ENABLED${norm}"
+fi
+if [[ "${first_param}" == "-t" || "${first_param}" == "--t"  || "${first_param}" == "-trace" || "${first_param}" == "--trace" || "${first_param}" == "trace" ]]
+then
+	debug=1
+	trace=1
+	echo -e "${RED}TRACE DEBUG MODE ENABLED${norm}"
+fi
+
+
+
+
 
 
 ###########################################################################################
@@ -676,13 +761,25 @@ print_term_line () {
 ####### NBA PROGRESSBAR #######
 # Creating a progress bar
 
-progress () {
-    local width=$(stty -a <$(tty) | grep -Po '(?<=columns )\d+') 
+progress_line () {
+    # ORIGINAL 2022: dot style progress line  
+    local width=$(stty -a <$(tty) | grep -Po '(?<=columns )\d+')
     local w=$(($width-40)) p=$1;  shift
     # create a string of spaces, then change them to dots
     printf -v dots "%*s" "$(( $p*$w/100 ))" ""; dots=${dots// /.};
     # print those dots on a fixed-width space plus the percentage etc. 
     printf "\r\e[K|%-*s| %3d %% %s " "$w" "$dots" "$p" "$*"; 
+}
+
+progress () {
+    # NEW 20241219: Pipe Viewer (PV) style  
+    # setting dynamic output on terminal resize with width=$(tput cols) 
+    local width=$(tput cols) 
+    local w=$(($width-40)) p=$1;  shift
+    # create a string of spaces, then change them to equals+> : '==>' (PV style)
+    printf -v equals "%*s" "$(( $p*$w/100 ))" ""; equals=${equals// /=};
+    # print those equals on a fixed-width space plus the percentage etc. (+PV style). 
+    printf "\r\e[K[%-*s] %3d%% %s " "$w" "${equals}>" "$p" "$*"; 
 }
 
 # Configuring the progress bar
@@ -700,6 +797,64 @@ done
 }
 
 ######## END NBA PROGRESSBAR  ##########
+
+
+######## NBA SCALE UNIT FUNCTION  ##########
+
+scale_unit () {
+local scale=${1}
+local extra_unit=${3}
+local no_unit=${2}
+local unit=
+
+if [[ "$#" -lt "2" ]] 
+then
+	echo -e "usage: \n\tscale_unit <number_to_scale> <no|std> <extra_unit>" >&2
+	echo -e "example:\n\tscale_unit 75998243711 no\t --> result: 70" >&2
+	echo -e "\tscale_unit 75998243711 no /s\t --> result: 70/s" >&2
+	echo -e "\tscale_unit 75998243711 std \t --> result: 70GiB" >&2
+	echo -e "\tscale_unit 75998243711 std /s\t --> result: 70GiB/s" >&2
+else
+
+	if [[ "${scale}" -gt "11258999068426240" ]]
+	then 
+		scale="$(($scale/1024/1024/1024/1024/1024))"
+		unit="PiB"
+	elif [[ "${scale}" -gt "10995116277760" ]]
+	then 
+		scale="$(($scale/1024/1024/1024/1024))"
+		unit="TiB"
+	elif [[ "${scale}" -gt "10737418240" ]]
+	then 
+		scale="$(($scale/1024/1024/1024))"
+		unit="GiB"
+	elif [[ "${scale}" -gt "10485760" ]]
+	then 
+		scale="$(($scale/1024/1024))"
+		unit="MiB"
+	elif [[ "${scale}" -gt "10240" ]]
+	then 
+		scale="$(($scale/1024))"
+		unit="KiB"
+	else scale="${scale}"
+		unit="B"
+	fi
+	if [[ "${no_unit}" == "no" ]]
+	then	
+		[[ "${extra_unit}" != "" ]] \
+			&& echo ${scale}${extra_unit} \
+			|| echo ${scale}
+	elif [[ "${no_unit}" == "std" ]]
+	then
+		[[ "${extra_unit}" != "" ]] \
+		&& echo ${scale}${unit}${extra_unit} \
+		|| echo ${scale}${unit}
+	fi
+fi
+}
+
+
+######## END SCALE UNIT FUNCTION  ##########
 
 
 ######## FUNCTIONS FROM JSON.SH ########
@@ -900,7 +1055,7 @@ _check_success_old () {
     return 0
 }
 
-_check_success2 () {
+_check_success_nba_old () {
     #  NBA  
     local val="${1}"
     local value=$(echo ${val} \
@@ -952,17 +1107,20 @@ _check_success () {
 print_err () {
 	# This function print error on stdout	
 	_check_success "${answer}" || \
-	(echo -e "${RED}${answer}${norm}" && return 1)
+	(echo -e "${RED}${answer}${norm}" >&2 && return 1)
 }
 
 _check_freebox_api () {
     local options=("")
+    local url="$FREEBOX_URL/api_version"
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     options=(-H "Content-Type: application/json")
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")
+[[ "${debug}" == "1" ]] && echo -e "_check_freebox_api request:\ncurl -s $url ${options[@]}" >&2
     local answer=$(curl -s "${options[@]}" "$FREEBOX_URL/api_version")
+[[ "${debug}" == "1" ]] && echo -e "_check_freebox_api result:\n${answer}" >&2
     _API_VERSION=$(get_json_value_for_key "$answer" api_version | sed 's/\..*//')
     _API_BASE_URL=$(get_json_value_for_key "$answer" api_base_url)
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
@@ -990,8 +1148,9 @@ call_freebox_api () {
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
 	    && options+=(--cacert "$FREEBOX_CACERT") \
 	    || options+=("-k")
-    #echo curl -s "$url" "${options[@]}" >&2
+[[ "${debug}" == "1" ]] && echo -e "call_fbx_api request:\ncurl -s $url ${options[@]}" >&2
     answer=$(curl -s "$url" "${options[@]}")
+[[ "${debug}" == "1" ]] && echo -e "call_fbx_api result:\n${answer}" >&2
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc
     echo "${answer}"
@@ -1011,14 +1170,12 @@ call_freebox_api2 () {
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")
-    echo "curl -s \"$url\" \"${options[@]}\""
-    #answer=$(curl --trace-ascii - -s "$url" "${options[@]}" 2>&1)
+[[ "${debug}" == "1" ]] && echo -e "call_freebox_api2 request:\ncurl -s $url ${options[@]}" >&2
     answer=$(curl -s "$url" "${options[@]}")
+[[ "${debug}" == "1" ]] && echo -e "call_freebox_api2 result:\n${answer}" >&2
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc
-    #echo "$answer"
     echo "${answer}"
-    #echo "'curl -s \"$url\" \"${options[@]}\"'" >curlvar2 # debug
     del_bundle_cert_file fbx-cacert-callapi2               # remove CACERT BUNDLE FILE
 }
 
@@ -1027,7 +1184,6 @@ call_freebox_api2 () {
 get_freebox_api () {
     local api_url="$1"
     local data=("${@:2}")
-    #local dataget=("")
     local options=("")
     local param=""
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
@@ -1037,15 +1193,15 @@ get_freebox_api () {
     [[ -n "$data" ]] \
 	    && for param in ${data[@]} 
     	       	do 
-		#dataget+=(-d "${param}") 
 		local dataget+=(-d "${param}")
 	       	done
     mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
 	    && options+=(--cacert "$FREEBOX_CACERT") \
 	    || options+=("-k")
-        #echo -e "curl -s \"$url\" \"${options[@]}\" \"${dataget[@]}\"" >&2 #debug
+[[ "${debug}" == "1" ]] && echo -e "get_fbx_api request:\ncurl -s $url ${options[@]} ${dataget[@]}" >&2
 	answer=$(curl -s "$url" "${options[@]}" ${dataget[@]})
+[[ "${debug}" == "1" ]] && echo -e "get_fbx_api result:\n${answer}" >&2
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc 
     echo "${answer}"
@@ -1068,18 +1224,17 @@ update_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
+[[ "${debug}" == "1" ]] && echo -e "put_fbx_api request:\ncurl -s \"$url\" \"${options[@]}\"" >&2 
     answer=$(curl -s "$url" "${options[@]}")
+[[ "${debug}" == "1" ]] && echo -e "put_fbx_api result:\n${answer}" >&2
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
 
+# Special shortcut
 upd_fbx_api () {
-	update_freebox_api "${@}"
-}
-put_fbx_api () {
 	update_freebox_api "${@}"
 }
 
@@ -1099,8 +1254,9 @@ add_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")	    
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
+[[ "${debug}" == "1" ]] && echo -e "post_fbx_api request:\ncurl -s \"$url\" \"${options[@]}\"" >&2
     answer=$(curl -s "$url" "${options[@]}")
+[[ "${debug}" == "1" ]] && echo -e "post_fbx_api result:\n${answer}" >&2
     if [[ ${action} == "listdisk" ]] 
     then 
             _check_success "${answer}"
@@ -1110,10 +1266,6 @@ add_freebox_api () {
     fi
     echo "${answer}"
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
-}
-
-post_fbx_api () {
-        add_freebox_api "${@}"
 }
 
 
@@ -1132,8 +1284,9 @@ del_freebox_api () {
             && options+=(--cacert "$FREEBOX_CACERT") \
             || options+=("-k")	    
     [[ -n "$data" ]] && options+=(-d "${data}")
-    #echo -e "curl -s \"$url\" \"${options[@]}\"\n" >&2 # debug
+[[ "${debug}" == "1" ]] && echo -e "del_fbx_api request:\ncurl -s \"$url\" \"${options[@]}\"" >&2
     answer=$(curl -s "$url" "${options[@]}")
+[[ "${debug}" == "1" ]] && echo -e "del_fbx_api result:\n${answer}" >&2
     #_check_success "$answer" || return 1
     _check_success "${answer}" || ctrlc
     echo "${answer}"
@@ -1141,6 +1294,28 @@ del_freebox_api () {
 }
 
 
+# CALL shortcuts
+
+get_fbx_api () {
+        get_freebox_api "${@}"
+}
+
+post_fbx_api () {
+        add_freebox_api "${@}"
+}
+
+put_fbx_api () {
+	update_freebox_api "${@}"
+}
+
+del_fbx_api () {
+        del_freebox_api "${@}"
+}
+
+call_fbx_api () {
+# autodetect GET or POST methode
+	call_freebox_api "${@}"
+}
 
 ###########################################################################################
 ## 
@@ -1155,37 +1330,20 @@ login_fbx () {
     local answer=
 
     answer=$(call_freebox_api 'login') || return 1
-    #echo answer=$answer  >&2 # debug
+[[ "${debug}" == "1" ]] && echo login_fbx answer=$answer  >&2 # debug
     local challenge=$(get_json_value_for_key "$answer" "result.challenge")
-    #echo challenge=$challenge  >&2 # debug
+[[ "${debug}" == "1" ]] && echo login_fbx challenge=$challenge  >&2 # debug
     [[ "$(openssl version |cut -d' ' -f2 |sed s/[a-z]//)" != "1.1.1" ]] && \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^SHA1(stdin)= //') || \
     local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
-    #echo password=$password  >&2 # debug
-    answer=$(call_freebox_api '/login/session/' "{\"app_id\":\"${APP_ID}\", \"password\":\"${password}\" }") || return 1
-    #echo -e "${answer}" >&2 # debug
-    _SESSION_TOKEN=$(get_json_value_for_key "$answer" "result.session_token")
-    #echo -e "_SESSION_TOKEN=$answer"  >&2 # debug
-    _SESSION_RESULT="${answer}"
-}
-
-# Login to Freebox API - copy of 'login_fbx' - For debugging purpose 
-login_fbx2 () {
-    local APP_ID="$1"
-    local APP_TOKEN="$2"
-    local answer=
-
-    answer=$(call_freebox_api 'login') || return 1
-    local challenge=$(get_json_value_for_key "$answer" "result.challenge")
-    [[ "$(openssl version |cut -d' ' -f2)" != "1.1.1n" ]] && \
-    local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^SHA1(stdin)= //') || \
-    local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
-    #local password=$(echo -n "$challenge" | openssl dgst -sha1 -hmac "$APP_TOKEN" | sed  's/^(stdin)= //')
+[[ "${debug}" == "1" ]] && echo login_fbx password=$password  >&2 # debug
     answer=$(call_freebox_api '/login/session/' "{\"app_id\":\"${APP_ID}\", \"password\":\"${password}\" }") || return 1
     _SESSION_TOKEN=$(get_json_value_for_key "$answer" "result.session_token")
-    echo -e "${answer}" >&2   # debug
     _SESSION_RESULT="${answer}"
+[[ "${debug}" == "1" ]] && echo -e "_SESSION_TOKEN=${_SESSION_TOKEN}"  >&2 # debug
+[[ "${debug}" == "1" ]] && echo -e "_SESSION_RESULT=${answer}" >&2 # debug
 }
+
 
 logout_freebox () {
 	local answer=
@@ -1193,7 +1351,7 @@ logout_freebox () {
 	_check_success $answer \
 		&& echo -e "${RED}Sucessfully logout from ${BOX,,} API !${norm}" \
 		|| return 1
-	#echo -e ${answer} >&2    # debug
+	[[ "${debug}" == "1" ]] && echo -e logout_freebox answer=${answer} >&2    # debug
 }	
 
 # Login to Freebox API and export to subshell _APP_ID and _APP_ENCRYPTED_TOKEN (reused by library)
@@ -1229,7 +1387,7 @@ app_login_freebox () {
 	local _MY_APP_ID=${_APP_ID}
 	local _MY_APP_TOKEN=$(echo "${_APP_ENCRYPTED_TOKEN}"|openssl enc -base64 -d -aes-256-cbc -salt -pass pass:${_APP_PASSWORD} -pbkdf2)
 	source ${BASH_SOURCE[0]}
-	#echo -e "_MY_APP_TOKEN=$_MY_APP_TOKEN \n_MY_APP_ID=$_MY_APP_ID" >&2 # debug
+	[[ "${debug}" == "1" ]] && echo -e "_MY_APP_TOKEN=$_MY_APP_TOKEN \n_MY_APP_ID=$_MY_APP_ID" >&2 
 	login_freebox "$_MY_APP_ID" "$_MY_APP_TOKEN" || return 1
 }
 
@@ -1237,11 +1395,12 @@ app_login_freebox () {
 check_login_freebox () {
     local answer=
     local session=
-
+	
+    [[ "${debug}" == "1" ]] && echo -e "check_login_freebox call:" >&2 # debug
     answer=$(call_freebox_api 'login')
     session=$(get_json_value_for_key "$answer" "result.logged_in")
     [[ "${session}" == "true" ]] || return 1
-}	
+}
 
 # relogin if session id disconnected
 relogin_freebox () {
@@ -1272,7 +1431,7 @@ list_fbx_access () {
 			vm
 			contacts'
 	print_term_line 33
-        echo -e "${WHITE}  ACCESS PRIVILEGE: ${LBLUE}$_APP_ID${norm}"
+	echo -e "${WHITE}  ACCESS PRIVILEGE: ${LBLUE}$_APP_ID${norm}"
 	print_term_line 33
 	for auth in $listfunc
 	do
@@ -1315,6 +1474,70 @@ EOF
 }
 
 
+
+###########################################################################################
+## 
+## NBA: GLOBAL NETWORK TEST FUNCTION: IP, PORT, MAC, RFC1918, DOMAIN ...
+## 
+###########################################################################################
+
+# testing if *port* is a number in [1- 65535]
+check_if_port () {
+	local port="${1}"
+[[ $port =~ ^[[:digit:]]+$ ]] \
+	&& [[ $port -gt 1 && $port -lt 65535 ]] \
+	|| return 1
+}
+
+# testing if *mac* has a 'mac address' format : 01:23:EF:45:ab:89
+check_if_mac () {
+	local mac="${1}"
+[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] \
+	|| return 1
+}	
+
+# testing if *ip* has an 'ip address' format : 0.0.0.0 to 255.255.255.255 
+check_if_ip () {
+	local ip="${1}"
+[[ $ip =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]] \
+        || return 1
+}	
+
+# testing if *ip* is a 'local ip address' as defined in rfc1918 
+check_if_rfc1918 () {
+        local ip="${1}"
+	check_if_ip $ip \
+	&& [[ $ip =~ ^(192\.168|10\.|172\.1[6789]\.|172\.2[0-9]\.|172\.3[01]\.) ]] \
+	|| return 1
+}
+
+# testing if *domain* is a domain name : 
+check_if_domain () { 
+	local domain="${1}"
+        [[ ${domain} =~ ^([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+        || return 1
+}
+
+# testing if *url* is a valid url : 
+check_if_url () { 
+	local url="${1}"
+        [[ ${url} =~ ^(((http|https|ftp|ftps|ftpes|sftp|ws|wss|rtsp):\/\/|)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
+        || return 1
+}
+
+
+######## match debug ##########
+#[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] && echo match-mac-and="$?"
+#[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] || echo match-mac-or="$?"
+#[[ $port =~ ^[[:digit:]]+$ ]] && echo match-digit-and="$?"
+#[[ $port =~ ^[[:digit:]]+$ ]] || echo match-digit-or="$?"
+#[[ $port -gt 1 && $port -lt 65535 ]] && echo match-value-and="$?"
+#[[ $port -gt 1 && $port -lt 65535 ]] || echo match-value-or="$?"
+####### /match debug/ #########
+
+
+
+
 ###########################################################################################
 ## 
 ## FRONTEND FUNCTIONS: library global frontend function for managing "output"
@@ -1326,25 +1549,34 @@ EOF
 
 
 # colorize result (green = sucess ; red = failed) and print result json 
-colorize_output () {
-	local result=("${@}")
-	#echo res=${result[@]}
-	#echo $error
-        [[ "${error}" != "1" ]] \
+colorize_output () { 
+local result=("${@}")
+[[ "${debug}" == "1" ]] \
+	&& echo colorize_output error: $error >&2 \
+	&& echo colorize_output result: >&2 && echo ${result[@]} >&2
+if [[ "$pretty" != "0" ]]
+then
+	[[ "${error}" != "1" ]] \
 	&& echo ${result[@]} |grep -q '{"success":true' >/dev/null \
 	&& echo -e "\n${WHITE}operation completed: \n${GREEN}$(echo ${result[@]}\
 	|sed -e 's/true,/true}\\\n/' -e  's/"result":/\\\nresult:\\\n/' -e 's/\\//g' -e 's/}}$/}/g' \
 	)${norm}\n" \
         || echo -e "\n${WHITE}operation failed ! \n${RED}${result[@]}${norm}\n" \
 	|| return 1
+else
+	echo ${result[@]}	
+fi	
 }
 
 # OK but dev in progress - print 'pretty json' output
 colorize_output_pretty_json () {
-        local result=("${@}")
-        #echo res=${result[@]}
-        #echo $error
-        [[ "${error}" != "1" ]] \
+local result=("${@}")
+[[ "${debug}" == "1" ]] \
+	&& echo colorize_output_pretty_json error: $error >&2 \
+	&& echo colorize_output_pretty_json result: >&2 && echo ${result[@]} >&2
+if [[ "$pretty" != "0" ]]
+then	
+	[[ "${error}" != "1" ]] \
         && echo ${result[@]} |grep -q '{"success":true' >/dev/null \
         && echo -e "\n${WHITE}operation completed: \n${norm}" \
 	&& echo	-e "$(echo ${result[@]} \
@@ -1355,10 +1587,12 @@ colorize_output_pretty_json () {
         )\n" \
         || echo -e "\n${WHITE}operation failed ! \n${RED}${result[@]}${norm}\n" \
         || return 1
-
 	# NBA ORIG PRINT pretty-json :
 	#|grep -Eo '"[^"]*" *(: *([0-9]*|"[^"]*")[^{}\["]*|,)?|[^"\]\[\}\{]*|\{|\},?|\[|\],?|[0-9 ]*,?' \
 	#|awk '{if ($0 ~ /^[}\]]/ ) offset-=4; printf "%*c%s\n", offset, " ", $0; if ($0 ~ /^[{\[]/) offset+=4}' \
+else
+        echo ${result[@]}       
+fi
 }
 
 # Home API send pretty_json answer => converting to normal JSON
@@ -1475,6 +1709,7 @@ check_and_feed_dl_param () {
 	local recursive=""		p_recursive=""
 	local username=""		p_username=""
 	local password=""		p_password=""
+	local cookie=""			p_cookie=""
 	local cookie1=""		p_cookie1=""
 	local cookie2=""		p_cookie2=""
 	local cookie3=""		p_cookie3=""
@@ -1551,7 +1786,7 @@ if [[ "${action}" == "enc" && "${error}" != "1" ]]
 	then	
 	[[ "${download_url}" == "" ]] && p_download_url=""
 	[[ "${hash}" == "" ]] && p_hash=""
-	[[ "${download_dir}" == "" ]] && p_download_dir="" || download_dir=$(echo -n ${download_dir}|base64)
+	[[ "${download_dir}" == "" ]] && p_download_dir="" || download_dir=$(echo -n ${download_dir}|base64 -w0)
 	[[ "${filename}" == "" ]] && p_filename=""
 	[[ "${recursive}" == "" ]] && p_recursive=""
 	[[ "${cookie}" == "" ]] && p_cookie=""
@@ -1561,7 +1796,7 @@ if [[ "${action}" == "enc" && "${error}" != "1" ]]
 	[[ "${username}" == "" ]] && p_username=""
 	[[ "${password}" == "" ]] && p_password=""
 	dl_enc_param_object=("${p_download_url}${download_url} ${p_hash}${hash} ${p_download_dir}${download_dir} ${p_filename}${filename} ${p_recursive}${recursive} ${p_username}${username} ${p_password}${password} ${p_cookie}${cookie} ${p_cookie1}${cookie1} ${p_cookie2}${cookie2} ${p_cookie3}${cookie3}")
-	#echo -e  "dl_enc_param_object: ${dl_enc_param_object}"
+	[[ "${debug}" == "1" ]] && echo -e  "dl_enc_param_object: ${dl_enc_param_object}" >&2
 fi
 
 # building dl_upd_param_object
@@ -1580,7 +1815,7 @@ if [[ "${action}" == "upd" && "${error}" != "1" ]]
 		done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
                 || return 1
 
-	#echo -e  "dl_upd_param_object: ${dl_upd_param_object}"  # debug
+	[[ "${debug}" == "1" ]] && echo -e  "dl_upd_param_object: ${dl_upd_param_object}" >&2 # debug
 fi
 }
 
@@ -1612,6 +1847,8 @@ then
     # direct download from freebox to the computer which launch this function
     echo -e "\n${WHITE}Downloading file from Freebox to local directory:${norm}"
     echo -e "\n${PURPL}${file_fullpath}${norm} ---> ${GREEN}./${file_target}${norm}${WHITE}"
+[[ "${debug}" == "1" ]] \
+&& echo -e "local_direct_dl_api request:\ncurl $url ${options[@]} ${extopts[@]} ${file_target}" >&2
     curl "$url" "${options[@]}" ${extopts[@]} ${file_target}
     echo -e "\n${WHITE}Done: \n${GREEN}$(du -sh ${file_target}|cut -d' ' -f1)${norm}\n"
 fi
@@ -1636,11 +1873,15 @@ add_dl_task_api () {
     [[ -n "$taskopt" ]] || echo -e "${RED}task parameters missing !${norm}" 
     error=0
     [[ "${#taskopt[@]}" -lt "2" ]] && action=add && param_download_err
-    
+
+    if [[ "${error}" != "1" ]]
+    then    	
+[[ "${debug}" == "1" ]]&& echo -e "add_dl_task_api request:\ncurl -s $url ${options[@]} ${taskopt[@]}" >&2
     answer=$(curl -s "$url" "${options[@]}" ${taskopt[@]})
+[[ "${debug}" == "1" ]] && echo -e "add_dl_task_api result:\n${answer}" >&2
     _check_success "$answer" || return 1
-    #echo "'echo -e "curl -s \"$url\" \"${options[@]}\" ${taskopt[@]}"'" >curlvar # debug
     echo -e "${answer}"
+    fi    
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
 }
 
@@ -1651,14 +1892,15 @@ list_dl_task_api () {
 	local TYPE="LIST OF DOWNLOADS TASKS:"
         local p0="]"
         local status=""
-	[[ "${action}" == "show" ]] && p0="" && TYPE="SHOW DOWNLOADS TASK: ${token}"
-	local answer=$(call_freebox_api  "/$api_url/" )
+	[[ "${action}" == "show" ]] && p0="" && TYPE="SHOW DOWNLOADS TASK:"
+	local answer=$(call_freebox_api  "/$api_url/")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
 	echo -e "\n${white}\t\t\t\t\t${TYPE}${norm}\n"
         # When json reply is big (ex: recieve a lanHost object) we need to cache results 
-        local id=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.id |cut -d' ' -f3))
+[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2
+        local id=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}\\.id |cut -d' ' -f3))
         #local download_dir=($(echo -e "${cache_result[@]}" |egrep ${p0}.download_dir |cut -d' ' -f3))
         local eta=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.eta |cut -d' ' -f3))
         local status=($(echo -e "${cache_result[@]}"|egrep -v "}$"|egrep ${p0}.status |cut -d' ' -f3))
@@ -1677,7 +1919,7 @@ list_dl_task_api () {
 	local download_path=("$(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.download_dir)")
 	local err=("$(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep result.error|cut -d' ' -f3)")
 	if [[ "${action}" == "show" ]] 
-	then	
+	then
 		download_dir=("$(echo -e "${download_path[@]}" |egrep ${p0}.download_dir |cut -d' ' -f3)")
 		[[ "${download_dir}" == "" ]] && \
 		download_dir="${LBLUE}[error:no_download_dir_availiable]${norm}" 
@@ -1706,11 +1948,9 @@ list_dl_task_api () {
                 [[ "${status[$i]}" == "error" ]] \
 			&& status[$i]="${RED}${status[$i]}\t" \
 			|| status[$i]="${GREEN}${status[$i]}"
-		#echo -e "status[$i]=${status[$i]}a" >&2 # debug
                 [[ "${status[$i]}" == "${GREEN}done" || "${status[$i]}" == "${GREEN}stopped" ]] \
 			&& status[$i]="${status[$i]}\t" \
 			|| status[$i]="${status[$i]}"
-		#echo -e "status[$i]=${status[$i]}b" >&2 # debug
                 [[ "${error[$i]}" == "none" ]] \
 			&& error[$i]="${GREEN}${error[$i]}" \
 			|| error[$i]="${RED}${error[$i]}"
@@ -1737,7 +1977,7 @@ show_dl_task_api () {
         error=0
         check_and_feed_dl_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && list_dl_task_api ${id} 2>&1
+        && list_dl_task_api ${id}
         echo
         unset action
 }
@@ -1746,9 +1986,9 @@ show_dl_task_api () {
 # function which add a download task and encode param in "www data urlencode" format
 enc_dl_task_api () {
     local api_url="downloads/add"
-    local taskopt=("${@}") #; echo -e "${taskopt[@]}\n\n\n" >&2 # debug
+    local taskopt=("${@}") 
+    [[ "${debug}" == "1" ]] &&  echo -e "enc_dl_task_api taskopt:\n${taskopt[@]}\n" >&2 # debug
     local options=("")
-    #local opttask=("")
     local param=""
           action=enc
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
@@ -1764,18 +2004,19 @@ enc_dl_task_api () {
 	check_and_feed_dl_param ${taskopt[@]}
     	for param in ${dl_enc_param_object[@]}; 
     		do 
-		#opttask+=(--data-urlencode $param)
 		local opttask+=(--data-urlencode $param)
     	done		
 	if [[ "$error" != "1" ]]
         then
-		#echo curl -s "$url" "${options[@]}" ${opttask[@]} >&2 #  debug
+[[ "${debug}" == "1" ]] \
+&& echo -e "enc_dl_task_api request:\ncurl -s \"$url\" \"${options[@]}\" ${opttask[@]}" >&2
     		answer=$(curl -s "$url" "${options[@]}" ${opttask[@]})
+[[ "${debug}" == "1" ]] && echo -e "enc_dl_task_api result:\n${answer}" >&2
     		_check_success "$answer" || return 1
     		echo -e "${answer}"
 	fi	
     del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
-    unset action    
+    unset action
 }
 
 
@@ -1957,11 +2198,11 @@ unset action
 
 
 ####### ADDING FUNCTION FOR MANAGING FILESYSTEM TASKS API #######
-# OK --> missing check filesystem params
-# OK --> missing error messages + help 
-# OK --> missing copy, move (rename), delete, compress, uncompress
-# OK --> missing mkdir + recursive delete
-# OK --> missing monitor filesystem task 
+# DONE: --> missing check filesystem params
+# DONE: --> missing error messages + help 
+# DONE: --> missing copy, move (rename), delete, compress, uncompress
+# DONE: --> missing mkdir + recursive delete
+# DONE: --> missing monitor filesystem task 
 
 
 # list filesystem path: need 'path' argument, results cached in local array 
@@ -1977,7 +2218,7 @@ ls_fs () {
 		echo -e "\n${WHITE}function param (do not affect raw mode):\n\t\t -h /  -help\t\tprint this help\n\t\t--h / --help\t\tprint this help\n\n\t\tonlyFolder=1\t\tdo not display files BUT display only folder\n\t\tremoveHidden=1\t\tdo not display hidden files and folders\n${norm}"
 		local help=1
 	else	
-		local fs_file_path=$(echo -n "$1"|base64)
+		local fs_file_path=$(echo -n "$1"|base64 -w0)
 		local fs_opts=("${@:2}")
 		local help=0
 	fi
@@ -2048,7 +2289,7 @@ list_fs_file () {
 		echo -e "\n${WHITE}function param (do not affect raw mode):\n\t\t -h /  -help\t\tprint this help\n\t\t--h / --help\t\tprint this help\n\n\t\tonlyFolder=1\t\tdo not display files BUT display only folder\n\t\tremoveHidden=1\t\tdo not display hidden files and folders\n${norm}"
 		local help=1
 	else	
-		local fs_file_path=$(echo -n "$1"|base64)
+		local fs_file_path=$(echo -n "$1"|base64 -w0)
 		local fs_opts=("${@:2}")
 		local help=0
 	fi
@@ -2127,16 +2368,14 @@ list_fs_task_api () {
     local tskid="$1"  
     local api_url="fs/tasks/${tskid}"
     [[ "${action}" == "show" ]] && p0="" && p1='egrep -v "}$"' && TYPE="SHOW FILESYSTEM TASK: ${tskid}" 
-        #local answer=$(call_freebox_api  "/$api_url/" 2>&1)
         local answer=$(call_freebox_api  "/$api_url/")
 	[[ "${output}" == "raw" ]] && echo ${answer} && ctrlc
-#        local cache_result=("$(dump_json_keys_values "${answer}")")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "$answer")") \
         || local cache_result=("$(dump_json_keys_values "$answer")")
         echo -e "\n${white}\t\t\t\t\t${TYPE}${norm}\n"        
         # When json reply is big (ex: recieve a collection of lanHost object) we need to cache results 
-        local id=($(echo -e "${cache_result[@]}" |egrep -v "}$|invalid"|egrep  ${p0}.id |cut -d' ' -f3))
+        local id=($(echo -e "${cache_result[@]}" |egrep -v "}$|invalid"|egrep  ${p0}\\.id |cut -d' ' -f3))
         local eta=($(echo -e "${cache_result[@]}" |egrep ${p0}.eta |cut -d' ' -f3))
         local duration=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.duration |cut -d' ' -f3))
         local started_ts=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.started_ts |cut -d' ' -f3))
@@ -2145,7 +2384,6 @@ list_fs_task_api () {
         local progress=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.progress |cut -d' ' -f3))
         local total_bytes=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.total_bytes |cut -d' ' -f3))
         local total_bytes_done=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.total_bytes_done |cut -d' ' -f3))
-        #local nfiles_done=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ].nfiles_done |cut -d' ' -f3))
         local nfiles=($(echo -e "${cache_result[@]}"|egrep -v "}$"|egrep ${p0}.nfiles |cut -d' ' -f3))
         local state=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.state |cut -d' ' -f3))
         local error=($(echo -e "${cache_result[@]}" |egrep -v "}$"|egrep ${p0}.error |cut -d' ' -f3))
@@ -2404,7 +2642,6 @@ get_fs_task () {
         && [[ "${error}" != "1" ]] \
 	&& tskresult=$(get_freebox_api /fs/tasks/${tskid}/)
         colorize_output "${tskresult}" 
-	#echo -e "tskresult=${tskresult}"
         unset action
 }
 
@@ -2415,7 +2652,7 @@ show_fs_task () {
         error=0
         check_and_feed_fs_task_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && list_fs_task_api ${tskid} 2>&1 
+        && list_fs_task_api ${tskid}
 	echo
         unset action
 }
@@ -2516,7 +2753,6 @@ check_and_feed_fs_param () {
 	local action=${action}			
         error=0
 	fs_param_object=("")
-	#fs_task_param_object=("")
         [[ "$numparam" -lt "1" ]] && param_fs_err
 
 # checking and feeding param for 'fs command api' 
@@ -2594,7 +2830,6 @@ check_and_feed_fs_param () {
 				((k++))	
 			done
 			valueparam[$idnameparam]=$(echo ${files[@]}|tr " " ",")
-	#valueparam[$idnameparam]="[\\\"$(echo ${valueparam[$idnameparam]}|sed -e 's/,/\\\",\\\"/g')\\\"]"
 			valueparam[$idnameparam]="[\"$(echo ${valueparam[$idnameparam]}|sed -e 's/,/\",\"/g')\"]"
 			else
 			valueparam[$idnameparam]="[\"$(echo -n ${valueparam[$idnameparam]}|base64 -w0)\"]"
@@ -2613,9 +2848,10 @@ check_and_feed_fs_param () {
                 echo "\"${nameparam[$idnameparam]}\":\"${valueparam[$idnameparam]}\""
                 ((idnameparam++))
 	done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
+	&& return 0 \
         || return 1
 
-        #echo -e  "fs_param_object: ${fs_param_object}"  # debug
+        [[ "${debug}" == "1" ]] && echo -e  "fs_param_object: ${fs_param_object}" >&2  # debug
 
 }
 
@@ -2696,10 +2932,11 @@ mkdir_fs_file () {
         local fsoutput="" fsout=""
         action=mkdir
         error=0
+	auto_relogin
         check_and_feed_fs_param "${@}" \
 	&& [[ "${error}" != "1" ]] \
         && fsresult=$(add_freebox_api /fs/${action}/ "${fs_param_object}") \
-	&& ([[ "${output}" != "raw" ]] \
+	&& ([[ "${output}" != "raw" && "${pretty}" != "0" ]] \
 	&& fsout=$(colorize_output "${fsresult}" |tail -2 |head -1 |cut -d'"' -f2) \
 	&& fsoutput=$(echo -n "${fsout}"|base64 -d )\
 	&& colorize_output "${fsresult}" | sed -e "s|^\".*|${fsoutput}|g" \
@@ -2850,13 +3087,6 @@ fi
 		[[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "path" \
                 && "$(echo ${param[$idparam]}|cut -d= -f1)" != "expire" ]] \
 		&& param_share_link_err && break
-		#if [[ "$(echo ${param[$idparam]}|cut -d= -f1)" == "expire" ]]
-		#then	
-		#	date -d"$(echo ${param[$idparam]}|cut -d= -f2)" 2>&1 >/dev/null 
-		#	[[ "$?" != "0" ]] && \
-		#echo -e "\n${RED}Error in date format! please use yyyy-mm-dd or yyyy-mm-ddThh:mm:ss${norm}" \
-		#	&& param_share_link_err && break
-		#fi	
         nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
         valueparam[$idparam]=$(echo -e "${param[$idparam]}"|cut -d= -f2-)
     ((idparam++))
@@ -2880,8 +3110,9 @@ fi
                 fi
                 echo "\"${nameparam[$idnameparam]}\":\"${valueparam[$idnameparam]}\""
                 ((idnameparam++))
-        done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) 
-	#echo -e share_link_object="${share_link_object[@]}"   # debug
+        done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
+	&& return 0
+	[[ "${debug}" == "1" ]] && echo -e share_link_object="${share_link_object[@]}" >&2   # debug
 }	
 
 
@@ -2889,7 +3120,7 @@ fi
 list_share_link () {
 	# This function provide a pretty list of all download links accessible without login in freebox 
         # if "${action}=show" and you pass a token as $1 argument, only task with this token will be shawn
-        # function show_shared_link call does this job      
+        # function show_shared_link call does this job
 
 	local tok=${1}
         local api_url="share_link/${tok}"
@@ -2897,9 +3128,7 @@ list_share_link () {
 	local p0="]"
   
         [[ "${action}" == "show" ]] && p0="" && TYPE="SHOW LINK TOKEN: ${token}"
-        #local answer=$(call_freebox_api  "/$api_url/" 2>&1)
         local answer=$(call_freebox_api  "/$api_url/" )
-        #local cache_result=("$(dump_json_keys_values "${answer}")")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -2934,22 +3163,25 @@ add_share_link () {
         error=0
         check_and_feed_share_link_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && lnkresult=$(add_freebox_api /share_link/ "${share_link_object[@]}" 2>&1)
+        && lnkresult=$(add_freebox_api /share_link/ "${share_link_object[@]}")
         colorize_output "${lnkresult}"
         unset action
 }
 
-# NBA : function which restrive a share_link 
+# NBA : function which retrive a share_link 
 get_share_link () {
         local lnkresult=""
+	local fullurl=""
 	local token=${1}
         action=get
         error=0
         check_and_feed_share_link_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && lnkresult=$(get_freebox_api /share_link/${token} 2>&1)
-	#echo -e "lnkresult=${lnkresult}" # debug
-        colorize_output "${lnkresult}"
+        && lnkresult=$(get_freebox_api /share_link/${token})
+	[[ "${debug}" == "1" ]] && echo -e "lnkresult=${lnkresult}" >&2 # debug
+	fullurl=$(get_json_value_for_key "${lnkresult}" result.fullurl)
+	colorize_output_pretty_json "${lnkresult}"
+	echo -e "${WHITE}share_link:\n$fullurl\n${norm}"
         unset action
 }
 
@@ -2960,7 +3192,7 @@ show_share_link () {
         error=0
 	check_and_feed_share_link_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && list_share_link ${token} 2>&1
+        && list_share_link ${token}
         echo
         unset action
 }
@@ -2973,7 +3205,7 @@ del_share_link () {
         error=0
         check_and_feed_share_link_param "${@}" \
         && [[ "${error}" != "1" ]] \
-        && lnkresult=$(del_freebox_api /share_link/${token} 2>&1)
+        && lnkresult=$(del_freebox_api /share_link/${token})
         colorize_output "${lnkresult}"
         unset action
 }
@@ -2988,64 +3220,6 @@ del_share_link () {
 ###########################################################################################
 
 
-####### NBA: GLOBAL NETWORK TEST FUNCTION #######
-
-# testing if *port* is a number in [1- 65535]
-check_if_port () {
-	local port="${1}"
-[[ $port =~ ^[[:digit:]]+$ ]] \
-	&& [[ $port -gt 1 && $port -lt 65535 ]] \
-	|| return 1
-}
-
-# testing if *mac* has a 'mac address' format : 01:23:EF:45:ab:89
-check_if_mac () {
-	local mac="${1}"
-[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] \
-	|| return 1
-}	
-
-# testing if *ip* has an 'ip address' format : 0.0.0.0 to 255.255.255.255 
-check_if_ip () {
-	local ip="${1}"
-[[ $ip =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]] \
-        || return 1
-}	
-
-# testing if *ip* is a 'local ip address' as defined in rfc1918 
-check_if_rfc1918 () {
-        local ip="${1}"
-	check_if_ip $ip \
-	&& [[ $ip =~ ^(192\.168|10\.|172\.1[6789]\.|172\.2[0-9]\.|172\.3[01]\.) ]] \
-	|| return 1
-}
-
-# testing if *domain* is a domain name : 
-check_if_domain () { 
-	local domain="${1}"
-        [[ ${domain} =~ ^([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
-        || return 1
-}
-
-# testing if *url* is a valid url : 
-check_if_url () { 
-	local url="${1}"
-        [[ ${url} =~ ^(((http|https|ftp|ftps|ftpes|sftp|ws|wss|rtsp):\/\/|)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?)$ ]] \
-        || return 1
-}
-
-
-######## match debug ##########
-#[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] && echo match-mac-and="$?"
-#[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] || echo match-mac-or="$?"
-#[[ $port =~ ^[[:digit:]]+$ ]] && echo match-digit-and="$?"
-#[[ $port =~ ^[[:digit:]]+$ ]] || echo match-digit-or="$?"
-#[[ $port -gt 1 && $port -lt 65535 ]] && echo match-value-and="$?"
-#[[ $port -gt 1 && $port -lt 65535 ]] || echo match-value-or="$?"
-####### /match debug/ #########
-
-
-
 ####### NBA ADDING FUNCTION FOR MANAGING DHCP TASKS API #######
 
 # NBA : Function which will list all dhcp static leases
@@ -3055,10 +3229,8 @@ check_if_url () {
 
 list_dhcp_static_lease () {
 
-	#local answer=$(call_freebox_api "/dhcp/static_lease" 2>&1)
 	local answer=$(call_freebox_api "/dhcp/static_lease" )
 	echo -e "\n\e${white}\t\t\t\tDHCP ASSIGNED STATIC LEASES:${norm}\n" 	
-	#local cache_result=("$(dump_json_keys_values "${answer}")")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -3076,8 +3248,8 @@ list_dhcp_static_lease () {
 		((k++))
 	done
 
-	#echo -e "${cache_result[@]}" >./restest # debug
-	#echo -e "${state[@]}" >./idtest #&& echo -e state[$i]="${state[$i]}"  # debug
+	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 # debug
+	[[ "${debug}" == "1" ]] && echo -e "${state[@]}\nstate[$i]=${state[$i]}" >&2 #debug
 	echo -e "\e[4m${WHITE}#:\t\tid:\t\t\tmac:\t\t\tip: \t\tstate: \t\thostname:${norm}" 	
 	_check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
 
@@ -3151,7 +3323,6 @@ check_and_feed_dhcp_param () {
 	local mac=""
 	local ip=""
 	local comment=""
-	local error=""
 	local idparam=0
 	local numparam="$#"
 	local nameparam=("")
@@ -3175,8 +3346,9 @@ check_and_feed_dhcp_param () {
 	done
 	
 	id=$mac
-	dhcp_object="{\"mac\":\"${mac}\",\"ip\":\"${ip}\",\"comment\":\"${comment}\"}"
-	#echo dhcp_object=${dhcp_object} # debug
+	[[ "$error" != "1" ]] \
+	&& dhcp_object="{\"mac\":\"${mac}\",\"ip\":\"${ip}\",\"comment\":\"${comment}\"}"
+	[[ "${debug}" == "1" ]] && echo dhcp_object=${dhcp_object} >&2 # debug
 }
 
 
@@ -3188,8 +3360,9 @@ add_dhcp_static_lease () {
 	local addlease=""
 	action=add
 	error=0
-	check_and_feed_dhcp_param "${@}" \
-	&& addlease=$(add_freebox_api /dhcp/static_lease/ "${dhcp_object}" 2>&1) 
+	check_and_feed_dhcp_param "${@}"
+	[[ "$error" != "1" ]] \
+	&& addlease=$(add_freebox_api /dhcp/static_lease/ "${dhcp_object}") 
 	colorize_output "${addlease}"
 	unset action
 }
@@ -3202,15 +3375,16 @@ upd_dhcp_static_lease () {
 	local updlease=""
 	action=upd
 	error=0
-	check_and_feed_dhcp_param "${@}" \
-	&& updlease=$(update_freebox_api /dhcp/static_lease/${id} "${dhcp_object}" 2>&1) 
+	check_and_feed_dhcp_param "${@}" 
+	[[ "$error" != "1" ]] \
+	&& updlease=$(update_freebox_api /dhcp/static_lease/${id} "${dhcp_object}") 
 	colorize_output "${updlease}"
 	unset action
 }
 
 
-# NBA : Function which will del DHCP static lease for specified MAC address
-# parameters : - id=    ('id' = 'mac' => 'id' has a 'mac address' format
+# NBA : Function which will delete DHCP static lease for specified MAC address
+# parameters : - id=    ('id' = 'mac' => 'id' has a 'mac address' format)
 del_dhcp_static_lease () {
 	local id=$1
 	local dellease=""
@@ -3223,7 +3397,7 @@ del_dhcp_static_lease () {
 		&& iderr=1 \
 		&& param_dhcp_err
 	[[ "$iderr" -eq "0" ]] \
-	&& dellease=$(del_freebox_api /dhcp/static_lease/${id} 2>&1) \
+	&& dellease=$(del_freebox_api /dhcp/static_lease/${id}) \
         || dellease="Error in 'id' mac address format"	
 	colorize_output "${dellease}"
 	unset iderr
@@ -3244,7 +3418,6 @@ list_fw_redir () {
 	local answer=$(call_freebox_api "/fw/redir/")
 	echo -e "\n${white}\t\t\t\tNETWORK INCOMMING NAT REDIRECTIONS:${norm}\n" 	
 	# When json reply is big (ex: recieve a lanHost object) we need to cache results 
-	#local cache_result=("$(dump_json_keys_values "${answer}")")
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -3258,8 +3431,8 @@ list_fw_redir () {
 	local hostname=($(echo -e "${cache_result[@]}" |egrep ].hostname |cut -d' ' -f3))
 	local state=($(echo -e "${cache_result[@]}" |egrep ].enabled |cut -d' ' -f3))
 	local i=0 j=0
-	#echo -e "${cache_result[@]}" >./restest # debug
-	#echo -e "${id[@]}" >./idtest && echo -e \"id[$i]="${id[$i]}"\"  # debug
+	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 # debug
+	[[ "${debug}" == "1" ]] && echo -e "${id[@]}\nid[$i]=${id[$i]}" >&2 # debug
 	echo -e "\e[4m${WHITE}#:\tid:\tlan-port:\tprotocol:\tlan_ip:\t\t\twan-port-range:\t\tallowed-ip\tstate:\t\thostname:${norm}" 	
         while [[ "${id[$i]}" != "" ]];
         	do
@@ -3273,7 +3446,7 @@ list_fw_redir () {
 	((j++))
 	done  || return 1
 echo
-}	
+}
 
 
 # NBA : Function which will print help on error FW_REDIR / NAT functions :
@@ -3467,7 +3640,6 @@ check_and_feed_fw_redir_param () {
 		&& valueparam+=($enabled)
 
 	# verify 'id' is specified for action=upd
-	#echo error=$error    # debug
 	if [[ "${action}" == "upd"  ]]
 	then
 		echo ${nameparam[@]}|grep -q 'id' 
@@ -3495,9 +3667,10 @@ check_and_feed_fw_redir_param () {
 			echo "\"${nameparam[$idnameparam]}\":\"${valueparam[$idnameparam]}\""
 		((idnameparam++))
 		done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
+		&& return 0 \
 		|| return 1	
 
-	#echo fw_redir_object=${fw_redir_object} # debug
+	[[ "${debug}" == "1" ]] && echo fw_redir_object=${fw_redir_object} >&2 # debug
 
 #fw_redir_object="{\"wan_port_start\":\"60000\",\"wan_port_end\":\"60010\",\"lan_port\":\"60000\",\"lan_ip\":\"192.168.123.123\",\"ip_proto\":\"tcp\",\"comment\":\"NAT: destination nat: PASIVE PORT\",\"src_ip\":\"0.0.0.0\",\"enabled\":\"1\"}"
 }
@@ -3515,7 +3688,7 @@ add_fw_redir () {
         action=add
         error=0
         check_and_feed_fw_redir_param "${@}" \
-	&& addfwredir=$(add_freebox_api /fw/redir/ "${fw_redir_object}" 2>&1)
+	&& addfwredir=$(add_freebox_api /fw/redir/ "${fw_redir_object}")
         colorize_output "${addfwredir}"
         unset action
 }
@@ -3529,7 +3702,7 @@ upd_fw_redir () {
         action=upd
         error=0
         check_and_feed_fw_redir_param "${@}" \
-        && updfwredir=$(update_freebox_api /fw/redir/${id} "${fw_redir_object}" 2>&1)
+        && updfwredir=$(update_freebox_api /fw/redir/${id} "${fw_redir_object}")
         colorize_output "${updfwredir}"
         unset action
 }
@@ -3548,7 +3721,7 @@ del_fw_redir () {
         	&& delfwredir="Error : 'id' must be a number !" \
                 && param_fw_redir_err 
         [[ "$iderr" -eq "0" ]] \
-        	&& delfwredir=$(del_freebox_api /fw/redir/${id} 2>&1) 
+        	&& delfwredir=$(del_freebox_api /fw/redir/${id}) 
         colorize_output "${delfwredir}" 
         unset iderr action
 }
@@ -3567,7 +3740,7 @@ ena_fw_redir () {
                 && enafwredir="Error : 'id' must be a number !" \
                 && param_fw_redir_err 
         [[ "$iderr" -eq "0" ]] \
-                && enafwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":true}" 2>&1)
+                && enafwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":true}")
         colorize_output "${enafwredir}"
         unset iderr action
 }
@@ -3586,7 +3759,7 @@ dis_fw_redir () {
                 && disfwredir="Error : 'id' must be a number !" \
                 && param_fw_redir_err 
         [[ "$iderr" -eq "0" ]] \
-                && disfwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":false}" 2>&1)
+                && disfwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":false}")
         colorize_output "${disfwredir}"
         unset iderr action
 }
@@ -3605,8 +3778,7 @@ dis_fw_redir () {
 list_vm_prebuild_distros () {
 	local quiete=${1}  # "-q" argument make function had a silent output - "-h" for help
  	local i=0 k=0
-	answer=$(call_freebox_api /vm/distros 2>&1)
-	#local cache_result=("$(dump_json_keys_values "${answer}")") # caching results
+	answer=$(call_freebox_api /vm/distros)
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -3629,7 +3801,7 @@ list_vm_prebuild_distros () {
 	[[ ${quiete} != "-q" && ${quiete} != "-h" ]] && \
         echo -e "\n${white}\t\t\t\tLIST AVAILIABLE 'Freebox Delta' PREBUILD VM DISTROS IMAGES:${norm}\n"
 	[[ ${quiete} != "-q" && ${quiete} != "-h" ]] && \
-	print_term_line
+	print_term_line 155
         while [[ ${os[$i]} != "" ]]
         do
 		# feeding ${filename[@]} array
@@ -3644,7 +3816,7 @@ list_vm_prebuild_distros () {
 		# printing distros list output
 		[[ ${quiete} != "-q" && ${quiete} != "-h" ]] && \
 		echo -e "${RED}id: $i${norm}\tname=${GREEN}${name[$i]//_/ }${norm}\tos=${GREEN}${os[$i]}${norm}\tfilename=${GREEN}${filename[$i]}${norm}\n\turl=${PURPL}${url[$i]}${norm}\n\thash=${PURPL}${hash[$i]}${norm}" && \
-	print_term_line
+	print_term_line 155
 	((i++))
 	done && echo || return 1
 # publish distro to subshell 
@@ -3747,7 +3919,7 @@ dl_vm_prebuild_distros () {
 		local dlvmdistro=$(enc_dl_task_api \
 				download_url=${distro_url[$id]} \
 				${dist_cmd}${is_hash} ${dl_cmd}${dl_path} \
-				filename=${filename} 2>&1)
+				filename=${filename})
 		colorize_output ${dlvmdistro}
 		local task_id=$(echo ${dlvmdistro}| cut -d':' -f4 |cut -d'}' -f1) && \
 		monitor_dl_task_adv_api $task_id
@@ -3816,7 +3988,7 @@ unset error action dl_cmd dl_path dist_cmd is_hash id filename
 # If you want to change the exit char, you may find the ascii table here :
 # https://www.physics.udel.edu/~watson/scen103/ascii.html
 #
-# You can also close he connection from the target, writing the equivalent value to the terminal :
+# You can also close the connection from the target, writing the equivalent value to the terminal :
 # echo -e "\013\c" >/proc/$$/fd/0
 # It's also possible to automatically close the connection when logout, add in ~/.bash_logout
 # something like : echo -e "Connection closed\n\013\c" >/proc/$$/fd/0
@@ -3829,11 +4001,10 @@ unset error action dl_cmd dl_path dist_cmd is_hash id filename
 
 ###### END NOTA BENE #####
 ws_session () {
+# 20241120 : unsused as keeplalived had been added in websocket
 sleep .5
-#debug
 #echo $(date) >./wstemp.log
 #echo $_SESSION_TOKEN >>./wstemp.log
-#/debug
 while [[ $(pgrep websocat) ]] ;
 	do 
 		# Refresh token every 1750 second (expire every 1800s)
@@ -3845,16 +4016,15 @@ while [[ $(pgrep websocat) ]] ;
 		done	
 		#source ${BASH_SOURCE[0]} && relogin_freebox
 		auto_relogin
-		#debug
 	        #echo $(date +"%Y%m%d %H:%M:%S") >>./wstemp.log
 		#echo  $(pgrep websocat) >>./wstemp.log
 		#echo $_SESSION_TOKEN >>./wstemp.log
-		#/debug
 	done 
 exit 200 # this function is never sourced directly from a tty but from websocat_session() 
 }
 
 websocat_session () {
+# 20241120 : unsused as keeplalived had been added in websocket
 ws_session & 2>&1 >/dev/null
 }	
 
@@ -3871,36 +4041,39 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
     local optsttye=("")
     local optscreen=("")
     local req=("")
+    local wsdebug=""
+    local sttydebug=""
+    [[ "${debug}" == "1" ]] && wsdebug="-v" && sttydebug="inlcr -igncr opost"
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
     local wsurl=$(echo $url |sed 's@https@wss@g')
     echo -e "\nConnecting Freebox websocket : ${light_purple_sed}${wsurl}${norm_sed}\n"
     [[ -n "$_SESSION_TOKEN" ]] \
     && options+=(-H \"X-Fbx-App-Auth: $_SESSION_TOKEN\") \
     && optws+=(--origin $FREEBOX_URL) \
-    && optws+=(--protocol \"chat, superchat\") \
-    && optws+=(-E --binary --ping-interval 30 --byte-to-exit-on 11 exit_on_specific_byte:stdio:) \
+    && optws+=(--protocol \"chat, superchat\" $wsdebug) \
+    && optws+=(-E --binary --ping-interval 10 --byte-to-exit-on 11 exit_on_specific_byte:stdio:) \
     && optwscl+=(exit_on_specific_byte) \
-    && optsttys+=(tput init\; stty raw -echo) \
+    && optsttys+=(tput init\; stty raw $sttydebug -echo) \
     && optsttye+=(stty sane cooked\; tput init) \
     && optscreen+=(-h 10000 -U -t Freebox-WS-API -dmS fbxws-$sockname) 
+
 
     mk_bundle_cert_file fbx-cacert-ws                # create CACERT BUNDLE FILE
 
     [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
     && optssl+=("SSL_CERT_FILE=$FREEBOX_CACERT") \
-    || optws+=(-k)     
+    || optws+=(-k)
 
     #req="${optsttys[@]}; ${optssl[@]} websocat ${options[@]} ${optws[@]} \"$wsurl\"; ${optsttye[@]}"
     req="${optsttys[@]}; ${optssl[@]} websocat ${options[@]} ${optws[@]} ${optwscl[@]}:${wsurl}; ${optsttye[@]}"
-
+   
     # DEBUG : 
-     #echo ${req[@]} ; # bash -c "${req[@]}"  
+    [[ "${debug}" == "1" ]] && echo ${req[@]} >&2  
         
         
-    #websocat_session && \
     [[ ! -n "$mode" ]] \
     && echo -e "${red}Type CTRL+K to EXIT ${norm}" \
-    && bash -c "${req[@]}"  
+    && bash -c "${req[@]}"
     
     [[ "$mode" == "detached" ]] \
     && dtach -n /tmp/fbxws.$sockname bash -c "${req[@]}" \
@@ -3920,7 +4093,6 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
     ret=$?
     echo -e "\n\nWebsocket connection closed" 
     del_bundle_cert_file fbx-cacert-ws                # remove CACERT BUNDLE FILE
-#    exit $ret
     ctrlc
 }
 
@@ -3934,17 +4106,20 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
     local optsttye=("")
     local optvnc=("")
     local req=("")
+    local wsdebug=""
+    local vncdebug=""
+    [[ "${debug}" == "1" ]] && wsdebug="-v" && vncdebug="-Log *:stderr:100"
     local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
     local wsurl=$(echo $url |sed 's@https@wss@g')
     echo -e "\nConnecting Freebox websocket : ${light_purple_sed}${wsurl}${norm_sed}\n"
     [[ -n "$_SESSION_TOKEN" ]] \
     && options+=(-H \"X-Fbx-App-Auth: $_SESSION_TOKEN\") \
     && optws+=(--origin $FREEBOX_URL) \
-    && optws+=(--protocol \"chat, superchat\") \
+    && optws+=(--protocol \"chat, superchat\" $wsdebug) \
     && optws+=(-E --binary --ping-interval 30 tcp-listen:127.0.0.1:5900 ) \
     && optsttys+=(tput init) \
     && optsttye+=(stty sane \; tput init) \
-    && optvnc+=(-shared -RemoteResize -geometry 1920x1080 -display $DISPLAY 127.0.0.1::5900 ) 
+    && optvnc+=(${vncdebug} -shared -RemoteResize -geometry 1920x1080 -display $DISPLAY 127.0.0.1::5900 ) 
 
     mk_bundle_cert_file fbx-cacert-ws                # create CACERT BUNDLE FILE
 
@@ -3954,7 +4129,8 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
 
     req="${optsttys[@]}; ${optssl[@]} websocat ${options[@]} ${optws[@]} ${wsurl}"
 
-    # DEBUG :  echo ${req[@]} ; # bash -c "${req[@]}"  
+    # DEBUG :  
+    [[ "${debug}" == "1" ]] && echo ${req[@]} >&2  
        
     bash -c "${req[@]} &" \
     && local wspid=$(pgrep websocat) \
@@ -4177,8 +4353,8 @@ if [[ "${action}" == "add" ]] && [[ "${error}" != "1" ]]
 	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_hostname" \
 	        && "$(echo ${param[$idparam]}|cut -d= -f1)" != "cloudinit_userdata" ]] \
 		&& param_vm_action_err && break
-		#nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
-                #valueparam=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+		# nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
+                # valueparam=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
 		((idparam++))
 	done	
 fi
@@ -4239,7 +4415,7 @@ do
 
         vm_object_[$j]="{\"mac\":${mac[$j]},\"cloudinit_userdata\":${userdata[$j]},\"cd_path\":${cd_path[$j]},\"id\":${id[$j]},\"os\":${os[$j]},\"enable_cloudinit\":${cloudinit[$j]},\"disk_path\":${disk_path[$j]},\"vcpus\":${vcpus[$j]},\"memory\":${memory[$j]},\"name\":${name[$j]},\"cloudinit_hostname\":${cloudinit_hostname[$j]},\"status\":${state[$j]},\"bind_usb_ports\":${usb[$j]},\"enable_screen\":${enable_screen[$j]},\"disk_type\":${disk_type[$j]}}"
 
-        #echo -e "${vm_object_[$i]}\n" 
+        [[ "${debug}" == "1" ]] && echo -e "${vm_object_[$i]}\n" >&2 
         ((i++))
 done
 }
@@ -4264,8 +4440,8 @@ if [[ "${error}" != "1" ]]
                 [[ "${nameparam}" == "vcpus" ]] && local vcpus=${valueparam}
                 [[ "${nameparam}" == "memory" ]] && local memory=${valueparam}
                 [[ "${nameparam}" == "disk_type" ]] && local disk_type=${valueparam}
-                [[ "${nameparam}" == "disk_path" ]] && local disk_path=$(echo -n ${valueparam}|base64)
-                [[ "${nameparam}" == "cd_path" ]] && local cd_path=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "disk_path" ]] && local disk_path=$(echo -n ${valueparam}|base64 -w0)
+                [[ "${nameparam}" == "cd_path" ]] && local cd_path=$(echo -n ${valueparam}|base64 -w0)
                 [[ "${nameparam}" == "enable_screen" ]] && local enable_screen=${valueparam}
                 [[ "${nameparam}" == "bind_usb_ports" ]] && local usb=${valueparam}
                 [[ "${nameparam}" == "os" ]] && local os=${valueparam}
@@ -4275,11 +4451,11 @@ if [[ "${error}" != "1" ]]
                 && local ud=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' ${valueparam}) \
                 && local userdata=$ud   # converting yaml file to one-line yaml
 
-                #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+[[ "${debug}" == "1" ]] && echo "idparam $idparam : param[$idparam] : ${param[$idparam]}" >&2  #debug 
                 ((idparam++))
         done
 
-        # echo cloudinit_userdata=${userdata}     # debug cloud-init
+[[ "${debug}" == "1" ]] && echo "cloudinit_userdata=${userdata}" >&2  #debug 
 
         # Convert text to boolean
 
@@ -4290,7 +4466,7 @@ if [[ "${error}" != "1" ]]
 
 vm_object_create="{\"cloudinit_userdata\":\"${userdata}\",\"cd_path\":\"${cd_path}\",\"os\":\"${os}\",\"enable_cloudinit\":${cloudinit},\"disk_path\":\"${disk_path}\",\"vcpus\":\"${vcpus}\",\"memory\":\"${memory}\",\"name\":\"${name}\",\"cloudinit_hostname\":\"${cloudinit_hostname}\",\"bind_usb_ports\":[${usb}],\"enable_screen\":${enable_screen},\"disk_type\":\"${disk_type}\"}"
 
-#echo -e "\nvm_object_create :\n${vm_object_create}\n"  # debug vm_object_create
+[[ "${debug}" == "1" ]] && echo -e "\nvm_object_create :\n${vm_object_create}\n" >&2 # debug 
 fi
 }
 
@@ -4316,8 +4492,8 @@ then
                 [[ "${nameparam}" == "vcpus" ]] && vcpus[$idvm]=${valueparam}
                 [[ "${nameparam}" == "memory" ]] && memory[$idvm]=${valueparam}
                 [[ "${nameparam}" == "disk_type" ]] && disk_type[$idvm]=${valueparam}
-                [[ "${nameparam}" == "disk_path" ]] && disk_path[$idvm]=$(echo -n ${valueparam}|base64)
-                [[ "${nameparam}" == "cd_path" ]] && cd_path[$idvm]=$(echo -n ${valueparam}|base64)
+                [[ "${nameparam}" == "disk_path" ]] && disk_path[$idvm]=$(echo -n ${valueparam}|base64 -w0)
+                [[ "${nameparam}" == "cd_path" ]] && cd_path[$idvm]=$(echo -n ${valueparam}|base64 -w0)
                 [[ "${nameparam}" == "enable_screen" ]] && enable_screen[$idvm]=${valueparam}
                 [[ "${nameparam}" == "bind_usb_ports" ]] && bind_usb=1 && usb[$idvm]=${valueparam}
                 [[ "${nameparam}" == "os" ]] && os[$idvm]=${valueparam}
@@ -4326,11 +4502,11 @@ then
                 [[ "${nameparam}" == "cloudinit_userdata" ]] &&  ci_userdata=1 \
                 && local ud=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' ${valueparam}) \
                 && userdata[$idvm]=$ud   # converting yaml file to one-line yaml
-                #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+[[ "${debug}" == "1" ]] && echo "idparam $idparam : param[$idparam] : ${param[$idparam]}" >&2 #debug 
                 ((idparam++))
         done
 
-# echo cloudinit_userdata=${userdata[$idvm]}     # debug cloud-init
+[[ "${debug}" == "1" ]] && echo "cloudinit_userdata=${userdata[$idvm]}" >&2     # debug cloud-init
 
         # Convert text to boolean
 #[[ "${cloudinit[$idvm]}" == "true" ]] && cloudinit[$idvm]="1" || cloudinit[$idvm]="0"
@@ -4425,7 +4601,7 @@ then
                 nameparam=$(echo "${param[$idparam]}"|cut -d= -f1)
                 valueparam=$(echo "${param[$idparam]}"|cut -d= -f2-)
                 [[ "${nameparam}" == "disk_type" ]] && disk_type=${valueparam}
-                [[ "${nameparam}" == "disk_path" ]] && disk_path=$(echo -n "${valueparam}"|base64)
+                [[ "${nameparam}" == "disk_path" ]] && disk_path=$(echo -n "${valueparam}"|base64 -w0)
                 [[ "${nameparam}" == "size" ]] && size=${valueparam}
                 [[ "${nameparam}" == "disk_shrink" ]] &&  shrink_allow=${valueparam}
                 #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
@@ -4438,8 +4614,8 @@ then
 vmdisk_object_create="{\"disk_path\":\"${disk_path}\",\"size\":\"${size}\",\"disk_type\":\"${disk_type}\"}"
 vmdisk_object_resize="{\"disk_path\":\"${disk_path}\",\"size\":\"${size}\",\"shrink_allow\":\"${shrink_allow}\"}"
 
-#echo -e "\nvmdisk_object_create :\n${vmdisk_object_create}"  # debug vmdisk_object_create
-#echo -e "\nvmdisk_object_resize :\n${vmdisk_object_resize}"  # debug vmdisk_object_resize
+[[ "${debug}" == "1" ]] && echo -e "\nvmdisk_object_create :\n${vmdisk_object_create}" >&2 # debug
+[[ "${debug}" == "1" ]] && echo -e "\nvmdisk_object_resize :\n${vmdisk_object_resize}" >&2 # debug 
 fi
 }
 
@@ -4495,11 +4671,13 @@ error=0
 param_vm_disk_err ${@}
 if [[ "$error" != "1" ]]
 	then
-        local dsk_file_path=$(echo -n "$1"|base64)
+        local dsk_file_path=$(echo -n "$1"|base64 -w0)
         local answer=$(call_freebox_api "/fs/ls/${dsk_file_path}")
         echo -e "\t\t\t${WHITE}VIRTUAL MACHINE DISK LIST (qcow2, raw, iso, img): ${norm}"
 	print_term_line 106
-	local cache=$(dump_json_keys_values ${answer})
+	[[ -x ${JQ} ]] \
+		&& local cache=$(dump_json_keys_values_jq ${answer}) \
+		|| local cache=$(dump_json_keys_values ${answer})
 	local idx=(`echo -e "${cache}"|egrep ].index |cut -d' ' -f3`)
 	local name=(`echo -e "${cache}"|egrep ].name |cut -d' ' -f3`)
 	local size=(`echo -e "${cache}"|egrep ].size |cut -d' ' -f3`)
@@ -4516,7 +4694,7 @@ if [[ "$error" != "1" ]]
                 then
                         #echo name=${name[$i]}
                 modification[$i]=$(date "+%Y%m%d-%H:%M:%S" -d@${modification[$i]})
-		       local vszdmp=$(add_freebox_api /vm/disk/info "{\"disk_path\": \"${dsk_file_path}$(echo -n /${name[$i]}|base64)\"}" 2>/dev/null)
+		       local vszdmp=$(add_freebox_api /vm/disk/info "{\"disk_path\": \"${dsk_file_path}$(echo -n /${name[$i]}|base64 -w0)\"}" 2>/dev/null)
                        local vsize=$(get_json_value_for_key "$vszdmp" "result.virtual_size") 
                        local sizeprint=""  vsizeprint=""        
                        [[ "${size[$i]}" -lt "10240" ]] && sizeprint="${size[$i]} B"
@@ -4553,7 +4731,6 @@ vm_show () {
 	|sed -e "s/Impossible/${red_sed}Impossible/" -e "s/no_such_vm/no_such_vm${norm_sed}/"
         echo
         unset action
-	#&& bash -c "source ${BASH_SOURCE[0]} && relogin_freebox && list_vm ${vmid} 2>&1" \
 }
 
 
@@ -4564,6 +4741,7 @@ vm_detail () {
         error=0
 	auto_relogin
         check_and_feed_vm_action_param "${@}" \
+	&& local _no_such_vm_exit=$(get_freebox_api vm/$idvm) \
         && get_vm_object_var \
         && if [ ! -z "$idvm" ];
                 then
@@ -4662,11 +4840,11 @@ if [[ "${error}" -eq 0 ]]
         		sleep .4444
 			printf "${WHITE}  resizing disk: $(echo ${disk_path}|base64 -d) ...${norm}\r"
         		#printf "\b\b\b\b\b\b\b\b\b"
-		        #relogin_freebox	
+		        relogin_freebox	
 		done \
 		&& printf "\r" \
                 || echo -e "${WHITE}task_status: ${norm}${RED}${task_status}${norm}"
-        	done \
+       	done \
         && local resdel=$(del_freebox_api  "/vm/disk/task/$resize_vmdisk_task_id") \
         && echo ${resdel} |grep -q '{"success":true}' >/dev/null \
         && echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${resize_vmdisk_task_id}${norm}${WHITE}: ${GREEN}${resdel}${norm} \n" \
@@ -4705,7 +4883,6 @@ then
                 && echo ${resdel} |grep -q '{"success":true' >/dev/null \
                 && echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${task_id}${norm}${WHITE}: ${GREEN}${resdel}${norm}" \
                 || echo -e "${WHITE}operation completed, deleting finished ${norm}${PURPL}task #${task_id}${norm}${WHITE}: ${RED}${resdel}${norm} \n"
-#del_freebox_api  "/fs/tasks/${task_id}" 
 fi
 }
 
@@ -4757,8 +4934,8 @@ vm_modify () {
              && echo -e "\tcloudinit_userdata = ${GREEN}${userdata[$idvm]}${norm}" \
              || echo -e "\tcloudinit_userdata = ${RED}<reset to null>${norm}" 
                 
-	echo -e "\tjson_vm_object_modif = ${BLUE}${vm_object_modif[$idvm]}${norm}"    # debug
-	#echo -e "\tjson_vm_object = ${BLUE}${vm_object_[$idvm]}${norm}\n"    # debug
+	echo -e "\tjson_vm_object_modif = ${BLUE}${vm_object_modif[$idvm]}${norm}" # debug
+[[ "${debug}" == "1" ]] && echo -e "\tjson_vm_object = ${BLUE}${vm_object_[$idvm]}${norm}\n" >&2 # debug
 	echo -e "
 ${WHITE}VM-${idvm} modification status:${norm} $(
 update_freebox_api "/vm/$idvm" "${vm_object_modif[$idvm]}" \
@@ -4768,8 +4945,6 @@ update_freebox_api "/vm/$idvm" "${vm_object_modif[$idvm]}" \
         )\n"
 fi
 }
-
-
 
 
 vm_delete () {
@@ -4786,12 +4961,6 @@ ${WHITE}VM delete status:${norm} ${GREEN} ${result}
 ${norm}" 
 fi
 }
-
-
-
-
-
-
 
 vm_start () {
 #[ -z "$1" ] && echo "function vm_start take 'id' as argument" 
@@ -4923,7 +5092,7 @@ vm_svnc () {
 
 ###########################################################################################
 ## 
-##  DOMAIN MANAGEMET FUNCTIONS: library domain management functions (list, add, del,...) 
+##  DOMAIN MANAGEMENT FUNCTIONS: library domain management functions (list, add, del,...) 
 ## 
 ###########################################################################################
 
@@ -5017,12 +5186,16 @@ param_dom_fbx_err () {
 	
 	
 [[ "${action}" == "add" \
-        || "${action}" == "del" \
 	|| "${action}" == "setdefault" ]] \
 	&& echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a domain name (use 'check_if_domain' to test)${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}you can get a list of all configured domain and status (showing all 'id'), just run: ${norm}\n${BLUE}${listfunct}${norm}\n" \
 && echo -e "EXAMPLE:\n${BLUE}${progfunct} id="my.domain.com" ${norm}" 
 
+[[ "${action}" == "del" ]] \
+&& echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a domain name (use 'check_if_domain' to test)${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}you can get a list of all configured domain and status (showing all 'id'), just run: ${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "WARNING: ${RED}Delete a domain name aslo delete it's associates TLS certficate ! ${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} id="my.domain.com" ${norm}" 
 
 [[ "${action}" == "addcert" ]] \
 && echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a domain name|key_type\t\t# key_type is 'ed' or 'rsa'|cert_pem\t\t# path to file containing your certificat in PEM format|key_pem\t\t\t# path to file containing your certificat PRIVATE KEY in PEM format|intermediates\t\t# path to file containing your root or intermediate CA certificat in PEM format${norm}\n" |tr "|" "\n" \
@@ -5087,7 +5260,7 @@ while [[ "${param[$idparam]}" != "" ]]
        	${valueparam} |	sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g') \
 	&& local intermediates=${inter}
 
-        #echo "idparam $idparam : param[$idparam] : ${param[$idparam]}"  #debug 
+[[ "${debug}" == "1" ]] && echo "idparam $idparam : param[$idparam] : ${param[$idparam]}" >&2 #debug 
         ((idparam++))
 done
 
@@ -5101,9 +5274,8 @@ check_if_domain ${id}  || param_dom_fbx_err
 dom_id=${id} 
 domcrt_json_object="{\"key_type\":\"${key_type}\",\"cert_pem\":\"${cert_pem}\",\"key_pem\":\"${key_pem}\",\"intermediates\":\"${intermediates}\"}"
 
-#echo -e "\ndomcrt_json_object :" ; echo "${domcrt_json_object}" >>./domcrt_json_object # debug domcrt_json_object
+[[ "${debug}" == "1" ]] && echo -e "domcrt_json_object:\n ${domcrt_json_object}" >&2 # debug 
 fi	
-
 }
 
 domain_add () {
@@ -5160,9 +5332,9 @@ domain_addcert () {
 ###########################################################################################
 
 
-###############################################
+####################################################
 ##  OTHER ACTIONS: LISTING FREEBOX COMPONENTS
-###############################################
+####################################################
 
 list_player () {
 local idpla=0
@@ -5173,7 +5345,8 @@ answer=$(get_freebox_api player)
 
 	# caching results
 	dump_json_keys_values "$answer" >/dev/null
-	while [[ $(get_json_value_for_key "$answer" "result[$idpla].id") != "" ]] 
+	#while [[ $(get_json_value_for_key "$answer" "result[$idpla].id") != "" ]] 
+	while [[ $(get_json_value_for_key "$answer" "result[$idpla].mac") != "" ]] 
         do
         local id[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].id")
         local mac[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].mac")
@@ -5232,7 +5405,7 @@ auto_relogin && list_repeater
 
 list_freeplug () {
 local idfre=0 idmem=0
-#answer=$(cat ./_test_freeplug.json | jq -rc) # NBA debug
+#answer=$(cat ./_test_freeplug.json | jq -rc) # NBA test
 answer=$(get_freebox_api freeplug)
 
         print_term_line 106 
@@ -5253,7 +5426,7 @@ answer=$(get_freebox_api freeplug)
         	local model[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].model")
         	local rate[$idmem]=$(get_json_value_for_key "$answer" "result[$idfre].members[$idmem].rx_rate")
 
-        	#local eth[$idmem]="down" # NBA debug
+        	#local eth[$idmem]="down" # NBA test
         	[[ "${eth[$idmem]}" != 'up' ]] \
         	        && echo -e "${light_purple_sed}${net[$idfre]}${PURPL}  ${WHITE}id: ${RED}${mid[$idmem]}  ${WHITE}eth: ${RED}${eth[$idmem]}${norm}  ${WHITE}speed: ${RED}${speed[$idmem]}${norm}  ${WHITE}model: ${norm}${RED}${model[$idmem]}${norm}  ${WHITE}role: ${norm}${RED}${role[$idmem]}${norm}  ${WHITE}rate:${norm} ${RED}${rate[$idmem]}${norm}" \
         	        || echo -e "${light_purple_sed}${net[$idfre]}${BLUE}  ${WHITE}id: ${GREEN}${mid[$idmem]}  ${WHITE}eth: ${GREEN}${eth[$idmem]}${norm}  ${WHITE}speed: ${GREEN}${speed[$idmem]}${norm}  ${WHITE}model: ${norm}${GREEN}${model[$idmem]}${norm}  ${WHITE}role: ${norm}${GREEN}${role[$idmem]}${norm}  ${WHITE}rate:${norm} ${GREEN}${rate[$idmem]}${norm}"  
@@ -5297,11 +5470,10 @@ answer=$(get_freebox_api wifi/state)
 answer=$(get_freebox_api wifi/ap)
         echo -e "\t\t\t${WHITE}AP ID, NAME, BAND, STATE, WIDTH, PRIMARY CHANNEL, SECONDARY CHANNEL${norm}"
         print_term_line 105 
-	#dump_json_keys_values "$answer" >/dev/null
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
-	#echo -e "${cache_result[@]}"  |grep ""
+	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 #debug
 	while [[ $(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].id") != "" ]] 
         do
         local id[$idwap]=$(echo -e "${cache_result[@]}" |egrep "result\[$idwap\].id"|cut -d' ' -f3)
@@ -5351,11 +5523,10 @@ answer=$(get_freebox_api storage/disk)
         print_term_line 126 
 	echo -e "\t\t${WHITE}DISK ID, TYPE, TABLE, STATE, SIZE (GB), SERIAL, MODEL, ${GREEN}ONLINE ${WHITE}/ ${PURPL}OFFLINE${norm}"
         print_term_line 126 
-	#dump_json_keys_values "$answer" >/dev/null
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
-	#echo -e "${cache_result[@]}"  |grep ""
+	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}"  >&2 # debug
 	local count=0
 	while [[ $(echo -e "${cache_result[@]}" |egrep -w "result\[$idsto\].id") != "" ]] 
         do
@@ -5395,7 +5566,6 @@ answer=$(get_freebox_api storage/partition)
         print_term_line 126 
 	echo -e "\t\t${WHITE}DISK ID, PARTITION ID, TYPE, SIZE (GiB), USED, FREE, LABEL, ${GREEN}MOUNTED ${WHITE}/ ${PURPL}UNMOUNTED${norm}"
         print_term_line 126 
-	#dump_json_keys_values "$answer" >/dev/null
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -5433,9 +5603,9 @@ auto_relogin && list_partition
 
 
 
-########################################
+#############################################
 ##  OTHER ACTIONS: WAKE-ON-LAN SUPPORT 
-########################################
+#############################################
 
 param_wol_fbx_err () {
 # Print errors for WAKE ON LAN 
@@ -5492,7 +5662,7 @@ check_and_feed_wol_param () {
                 done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
                 || return 1
 
-	#echo wol_object=${wol_object} # debug
+	[[ "${debug}" == "1" ]] && echo wol_object=${wol_object} >&2 # debug
 
 }	
 
@@ -5514,22 +5684,1364 @@ wol_fbx () {
 }
 
 
+####################################################
+##  OTHER ACTIONS: MONITOR EVENTS OVER WEBSOCKET
+####################################################
+
+# This function monitor events send by Freebox over websocket API
+# - VM events : vm_state_changed / vm_disk_task_done
+# - LAN events: lan_host_l3addr_reachable / lan_host_l3addr_unreachable
+
+param_fbx_ws-events_err () {
+error=1
+
+[[ "${action}" == "mon" ]] \
+	&& local funct="${action}_fbx_ws-events" \
+	&& echo -e "\nERROR: ${RED}<param> for ${funct} must be:${norm}${BLUE}|event=\t\t4 events can be suscribed over freebox websocket:|\t\t- ip_up (LAN): lan_host_l3addr_reachable (an ip become reachable)|\t\t- ip_down (LAN): lan_host_l3addr_unreachable (an ip become unreachable)|\t\t- vm_state (VM): vm_state_changed (vm start or stop)|\t\t- vmdisk_task (VM DISK): vm_disk_task_done (vm disk task has finished)${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to monitor events: ${norm}\n${BLUE}event=  ${norm}\n" \
+&& echo -e "NOTE: ${RED}monitor events can be specify on cmdline up to 4 times:${norm}\n${BLUE}event=ip_up event=ip_down event=vm_state event=vmdisk_task ${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${funct} event=\"vm_state\"${norm}\n" \
+&& echo -e "EXAMPLE (MULTIPLE EVENTS):\n${BLUE}${funct} event=\"vm_state\" event=\"vmdisk_task\" event=\"ip_up\" event=\"ip_down\"${norm}" 
+echo
+return 0
+}
+
+
+check_and_feed_fbx_ws-events () {
+	local param=("${@}")
+	local event=("")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local fbx_events_object_array=""
+        fbx_events_object=""
+
+	[[ "$numparam" -lt "1" ]] && param_fbx_ws-events_err
+if [[ "${error}" != "1" ]]
+then
+        while [[ "${param[$idparam]}" != "" && "${error}" != "1" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "event" ]] \
+                && param_fbx_ws-events_err && break 
+                [[ "$(echo ${param[$idparam]}|cut -d= -f2)" != "ip_up" \
+			&& "$(echo ${param[$idparam]}|cut -d= -f2)" != "ip_down" \
+			&& "$(echo ${param[$idparam]}|cut -d= -f2)" != "vm_state" \
+			&& "$(echo ${param[$idparam]}|cut -d= -f2)" != "vmdisk_task" ]] \
+                && param_fbx_ws-events_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e "${param[$idparam]}"|cut -d= -f2)
+	[[ "${valueparam[$idparam]}" == "ip_up" ]] && valueparam[$idparam]="lan_host_l3addr_reachable"
+	[[ "${valueparam[$idparam]}" == "ip_down" ]] && valueparam[$idparam]="lan_host_l3addr_unreachable"
+	[[ "${valueparam[$idparam]}" == "vm_state" ]] && valueparam[$idparam]="vm_state_changed"
+	[[ "${valueparam[$idparam]}" == "vmdisk_task" ]] && valueparam[$idparam]="vm_disk_task_done"
+        ((idparam++))
+        done
+
+	[[ "${debug}" == "1" ]] \
+		&& echo check_and_feed_fbx_ws-events: \
+		&& echo nameparam[@]=${nameparam[@]} \
+		&& echo valueparam[@]=${valueparam[@]} >&2
+fi
+        # building 'fbx_events' json object
+        [[ "${error}" != "1" ]] \
+                && fbx_events_object_array=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "\"${valueparam[$idnameparam]}\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@[@' -e 's@,$@]@' ) \
+                || return 1
+	[[ "$fbx_events_object_array" != "" ]] \
+		&& fbx_events_object="{\"action\": \"register\", \"events\": ${fbx_events_object_array}}"
+	[[ "${debug}" == "1" ]] \
+		&& echo fbx_events_object_array=${fbx_events_object_array} \
+		&& echo fbx_events_object=${fbx_events_object} >&2 # debug
+return 0
+}
+
+
+mon_fbx_ws-events () {
+check_login_freebox || (echo -e "${RED}You must login to access this function: auth_required${norm}" && ctrlc)
+local options=("")
+local optws=("")
+local optssl=("")
+local req=("")
+local api_url="ws/event"
+local wsdebug=""
+[[ "${debug}" == "1" ]] && wsdebug="-v" 
+local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+local wsurl=$(echo $url |sed 's@https@wss@g')
+error=0
+action="mon"
+check_and_feed_fbx_ws-events ${@}
+if [[ "${error}" != "1" ]]
+then
+	[[ -n "$_SESSION_TOKEN" ]] \
+	&& options+=(-H \"X-Fbx-App-Auth: $_SESSION_TOKEN\") \
+	&& optws+=(--origin $FREEBOX_URL) \
+	&& optws+=(--protocol \"chat, superchat\" $wsdebug) \
+	&& optws+=( -t --no-close --ping-interval 10 ) 
+
+    mk_bundle_cert_file fbx-cacert-wsmon                # create CACERT BUNDLE FILE
+    [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
+    && optssl+=("SSL_CERT_FILE=$FREEBOX_CACERT") \
+    || optws+=(-k)     
+
+    req="echo -e '"${fbx_events_object}"' |${optssl[@]} websocat ${options[@]} ${optws[@]} ${wsurl}"
+
+    # DEBUG :  
+    [[ "${debug}" == "1" ]] && echo -e "mon_fbx_ws-events ws request:\n${req[@]}" >&2
+    
+    bash -c "${req[@]}" 
+    
+    del_bundle_cert_file fbx-cacert-wsmon                # remove CACERT BUNDLE FILE
+    unset error
+fi
+}
+
+
+clean_shm_mon_files () {
+# cleaning shared memory files
+rm -f /dev/shm/mon_lastreply_$wspid
+rm -f /dev/shm/mon_allreply_$wspid
+}
+
+make_shm_mon_files () {
+# creating shared memory files
+touch /dev/shm/mon_lastreply_$wspid
+touch /dev/shm/mon_allreply_$wspid
+}
+
+mon_bg_fbx () {
+# WARNING this function is usint file descriptors (fd) !
+local tcp_host=$1
+local tcp_port=$2
+local fd0=$3
+local CR=$(echo -en "\r") # carriage return
+clean_shm_mon_files                              # clean eventual old shared memory files
+make_shm_mon_files                               # create shared memory files  
+exec {fd0}<>/dev/tcp/${tcp_host}/${tcp_port}    # connect {fd} to tcp pipe
+
+if [[ ${debug} == "1" ]]
+then
+        while read <&${fd0}
+        do
+                wsreply=${REPLY//$CR/}
+                echo ${wsreply} >/dev/shm/mon_lastreply_$wspid
+                echo ${wsreply} >>/dev/shm/mon_allreply_$wspid
+                [[ ${trace} == "1" ]] && echo ${wsreply}
+        done &
+else
+        ( while read <&${fd0}
+        do
+                wsreply=${REPLY//$CR/}
+                echo ${wsreply} >/dev/shm/mon_lastreply_$wspid
+                echo ${wsreply} >>/dev/shm/mon_allreply_$wspid
+                echo ${wsreply}
+        done & )
+fi
+
+echo -e ${fbx_events_object} >&${fd0}
+
+#sleep 10
+}
+
+# --> list subscribed events
+# --> suscribe new events
+# --> unsuscribe events ?
+# --> know if an event monitor process is running
+# --> timestamp and record each type of event in an event dedicated array 
+
+
+mon_bg_fbx_ws-events () {
+check_login_freebox || (echo -e "${RED}You must login to access this function: auth_required${norm}" && ctrlc)
+local options=("")
+local optws=("")
+local optssl=("")
+local req=("")
+local api_url="ws/event"
+local wsdebug=""
+[[ "${debug}" == "1" ]] && wsdebug="-v" 
+local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+local wsurl=$(echo $url |sed 's@https@wss@g')
+local tcp_port="3009"
+local tcp_host="127.0.0.1"
+local fd0="fd0"   # close file descriptor with variable : {fd}>&- 
+error=0
+action="mon"
+check_and_feed_fbx_ws-events ${@}
+if [[ "${error}" != "1" ]]
+then
+    [[ $(pgrep websocat | wc -l) -ne '0' ]] \
+            && tcp_port=$(($tcp_port+$(pgrep websocat | wc -l))) \
+            && fd=$(($fd+$(pgrep websocat | wc -l)))
+    [[ "${debug}" != "1" ]] && wsdebug="-q"
+    [[ "${debug}" == "1" ]] && wsdebug="-v" \
+            && echo -e "\nwebsocket tcp_host=$tcp_host tcp_port=$tcp_port \${fd0}=$fd0" >&2
+
+	[[ -n "$_SESSION_TOKEN" ]] \
+	&& options+=(-H \"X-Fbx-App-Auth: $_SESSION_TOKEN\") \
+	&& optws+=(--origin $FREEBOX_URL) \
+	&& optws+=(--protocol \"chat, superchat\" $wsdebug) \
+	&& optws+=( --text --no-close --ping-interval 10 ) \
+	&& optws+=( tcp-listen:${tcp_host}:${tcp_port} )
+
+    mk_bundle_cert_file fbx-cacert-wsbgmon                # create CACERT BUNDLE FILE
+    [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
+    && optssl+=("SSL_CERT_FILE=$FREEBOX_CACERT") \
+    || optws+=(-k)     
+
+    req="echo -e '"${fbx_events_object}"' |${optssl[@]} websocat ${options[@]} ${optws[@]} ${wsurl}"
+    req="${optssl[@]} websocat ${options[@]} ${optws[@]} ${wsurl}"
+
+    # DEBUG :  
+    [[ "${debug}" == "1" ]] && echo -e "mon_bg_fbx_ws-events ws request:\n${req[@]}" >&2
+    
+    bash -c "${req[@]} &" \
+	    && wspid=$(ps -ef |grep websocat |grep -Ev 'grep|bash' |grep $tcp_port |awk '{print $2}') \
+	    && mon_bg_fbx ${tcp_host} ${tcp_port} ${fd0}
+
+   # [[ ! -z "$wspid" ]] \
+   #         && kill -9 ${wspid} \
+   #         && clean_shm_mon_files \
+   #         && echo -e "\nWebsocket connection closed" 
+
+    
+   # del_bundle_cert_file fbx-cacert-wsbgmon                # remove CACERT BUNDLE FILE
+   # stty sane cooked
+   # tput init
+    unset error
+   # ctrlc
+fi
+}
+
+####################################################
+##  OTHER ACTIONS: DIRECT UPLOAD FILE OVER WEBSOCKET
+####################################################
+
+# This functions upload local files to Freebox storage over websocket API. These set 
+# of functions are using websocket bidirectionnal communication mixing text websocket 
+# frames (API command / reply) and binary websocket frames (file data chunk send) in 
+# the same pipe. To achieve this, several forked process can be launched in the 
+# background reading and writing answer to websocket API using files descriptors for 
+# inter process communication and a simple background bash tcp client  
+# Transfering a list of files (not only one), monitoring and upload resume is supported
+
+# SIMPLE WEBSOCKET UPLOAD (tagged base64 binary data frames + text command frames): 
+# websocat -H "X-Fbx-App-Auth: $_SESSION_TOKEN" --origin https://fbx.fbx.lan --protocol "chat, superchat" -v --ping-interval 10 --no-close --buffer-size 524800 --text --base64 --binary-prefix B tcp-listen:127.0.0.1:2009 wss://fbx.fbx.lan/api/v12/ws/upload  # buffer = 512*1025 
+# exec 3<>/dev/tcp/127.0.0.1/2009 ; CR=$(echo -en "\r"); while read <&3; do echo -e "\r${REPLY//$CR/}"; done &
+# echo '{"action":"upload_start","request_id":"904010","size":"104857600","dirname":"L0ZCWDI0VC90ZXN0","filename":"myvm3.qcow2","force":"overwrite"}' >&3
+# dd if=/home/user/myvm3.qcow2 bs=512K status=progress | base64 -w$((512*1024)) |sed -e 's/^/B/' >&3
+# echo '{"action":"upload_finalize","request_id":904010}' >&3 ; exec 3>&-
+
+
+param_direct_ul_err () {
+error=1
+
+[[ "${action}" == "cancel" \
+	|| "${action}" == "delete" \
+	|| "${action}" == "show" \
+	|| "${action}" == "get" ]] \
+	&& local funct="${action}_direct_upload" 
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct=${funct} \
+        || local progfunct=${prog_cmd} 
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_direct_upload" \
+        || local listfunct=${list_cmd} 
+
+[[ "${action}" == "cancel" \
+	|| "${action}" == "delete" \
+	|| "${action}" == "show" \
+	|| "${action}" == "get" ]] \
+	&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id\t\t\t# id: must be a number${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to get list of all upload (showing all 'id'):${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 987${norm}\n" 
+
+[[ "${action}" == "ul" ]] \
+	&& local funct="local_direct_${action}_api" \
+	&& echo -e "\nERROR: ${RED}<param> for ${funct} must be:${norm}${BLUE}|files=\t\tlocal file path of files to upload|dst=\t\tremote directory on Freebox storage to upload file|mode=\t\tcan be 'resume' or 'overwrite': resume or overwrite destination file${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}directory can be passed in 'files=' parameter and will be recursively upload${norm}\n" \
+&& echo -e "NOTE: ${RED}if 'directory/' end by '/' all files will be upload to 'dst' and to 'dst/directory' otherwise\n      empty files and sub-directory will also be created${norm}\n" \
+&& echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to upload files: ${norm}\n${BLUE}files=|dst=|mode= ${norm}\n"|tr "|" "\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${funct} files=\"/home/user/myvm.qcow2\" dst=\"/FBXSTORAGE/vmimage\" mode=\"overwrite\"${norm}\n" \
+&& echo -e "EXAMPLE (MULTIPLE UPLOAD):\n${BLUE}${funct} files=\"/home/user/myvm0.qcow2,/home/user/myvm1.qcow2,/path/to/directory0/,/path/to/directory1\" dst=\"/FBXSTORAGE/vmimage\" mode=\"resume\" ${norm}\n"
+return 0
+}
+
+
+check_and_feed_direct_ul () {
+        local param=("${@}")
+ 	local nameparam=("")		idparam=0
+        local valueparam=("")		numparam="$#"
+	local action=${action}
+	dir_name=			mode=
+	size=("")
+	lstfile=() # don't put "" as first array value
+	file_list=()
+	name_list=()
+	dir_list=()
+	file_size=()
+	req_id=()
+	empty_dir_to_create=()
+	ul_param_object=("")
+        error=0
+
+if [[  "$numparam" -eq "1" ]] 
+then
+	local id=${1}
+	[[ "${debug}" == "1" ]] \
+		&& echo check_and_feed_direct_ul: \
+		&& echo -e "id=$id" >&2
+	if [[ "${action}" == "cancel" || "${action}" == "delete" \
+		|| "${action}" == "show" || "${action}" == "get" ]] 
+	then
+		[[ ${id} =~ ^[[:digit:]]+$ ]] || param_direct_ul_err
+	fi	 
+elif [[  "$numparam" -eq "3" ]]	
+then
+	[[ "${debug}" == "1" ]] && echo check_and_feed_direct_ul: >&2
+	[[ "${debug}" == "1" ]] && echo -e "request_base_id: ${rid}" >&2
+
+	# checking and feeding param for 'upload command api' 
+	[[ "${error}" != "1" ]] && [[ "${action}" == "ul" ]] \
+	 && while [[ "${param[$idparam]}" != "" ]]
+	    do
+	        [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "files" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "dst" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "mode" ]] \
+		&& param_direct_ul_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e "${param[$idparam]}"|cut -d= -f2)
+		#------------------------------------------------------------------------------
+		# First we need to retrieve destination base directory name 'dst' and 'mode'
+		if [[ "${nameparam[$idparam]}" == "dst" ]]
+		then
+			dir_name=${valueparam[$idparam]}
+			dir_name=${dir_name%/}
+		fi
+		if [[ "${nameparam[$idparam]}" == "mode" ]] 
+		then
+			[[ "${valueparam[$idparam]}" != "overwrite" \
+			&& "${valueparam[$idparam]}" != "resume" ]] \
+			&& param_direct_ul_err && break 2 \
+			|| mode=${valueparam[$idparam]}
+		fi
+	        ((idparam++))
+	    done \
+	    && idparam=0 \
+	    && while [[ "${param[$idparam]}" != "" ]]
+            do
+		#------------------------------------------------------------------------------
+		# Second, we are working on 'files' content (could be file or directory)
+		if [[ "${nameparam[$idparam]}" == "files" ]]
+		then
+			lstfile+=($(echo ${valueparam[$idparam]}| tr "," "\n"))
+			[[ $debug == 1 ]] && echo lstfile[@]: ${lstfile[@]}
+		       	local m=0
+			while [[ "${lstfile[$m]}" != "" ]]
+			do
+			if [[ -d ${lstfile[$m]} ]]
+			then
+				local explstall=()	local explstdirname=() 	local explstdir=()
+				local explstfile=()	local explstfilename=()
+
+				local dirname_name=$(echo ${lstfile[$m]} |grep -o '[^/]*$')
+				local dirname_path=${lstfile[$m]/${dirname_name}/}
+				dirname_path=${dirname_path%/}
+				[[ ${dirname_name} == "" ]] && dirname_name='/'      
+				local true_path=$(echo "$(cd "$(dirname "${lstfile[$m]}")" && pwd)/$(basename "${lstfile[$m]}")")
+				
+			# Populating temporary directory working array 	
+				explstall+=($(
+					du -a ${true_path} \
+					|awk '{print $2}' \
+					| grep -vw ${true_path}$
+					))
+				
+				explstfile+=($(
+				for entry in ${explstall[@]}; 
+				do 
+					[[ ! -d $entry  \
+						&& ! -S $entry \
+						&& ! -p $entry \
+						&& ! -c $entry ]] \
+					&& echo $entry; 
+				done))
+
+				explstdir=(${explstfile[@]/${dirname_path}/})
+				
+				explstdirname+=($(
+				for entry in ${explstdir[@]}; 
+				do 
+					echo ${entry/$(echo $entry |grep -o '[^/]*$')/};
+				done ))
+
+				explstfilename+=($(
+				for entry in ${explstfile[@]}; 
+				do 
+					echo $entry |grep -o '[^/]*$'; 
+				done))
+				
+			# Populating final array 
+				empty_dir_to_create+=($(
+                                for entry in ${explstall[@]};
+                                do
+					[[ -d $entry ]] \
+					&& local entry_size=$(du -a -t -1 --apparent-size $entry \
+					| awk '{print $1}') \
+					&& if [[ ${entry_size} == "0" ]]
+					   then
+					   	entry=${entry/${dirname_path}/}	\
+						&& [[ ${entry} != '/' ]] \
+						&& echo ${dir_name}${entry}
+					  fi
+                                done ))
+
+				req_id+=($(
+				local v=0 
+					while [[ ${explstdir[$v]} != "" ]] 
+					do 
+						echo $(($rid+((10000*$(($m+1)))-$v))) 
+					((v++))
+				done ))
+				
+				file_size+=($(
+				local v=0 
+                                        while [[ ${explstfile[$v]} != "" ]]
+                                        do
+						stat -L --printf="%s\n" ${explstfile[$v]}
+                                        ((v++))
+                                done ))
+				
+				dir_list+=($(
+				local v=0
+                                        while [[ ${explstdirname[$v]} != "" ]]
+                                        do
+					echo -n ${dir_name}${explstdirname[$v]} |base64 -w0
+					# echo a new line to avoid bash add all values to cell 1
+					echo
+                                        ((v++))
+                                done ))
+
+				#name_list+=($(for entry in ${explstfile[@]}; do echo $entry |grep -o '[^/]*$'; done))
+				name_list+=(${explstfilename[@]})
+				file_list+=(${explstfile[@]})
+
+				if [[ $debug == 1 ]] 
+				then	
+					echo -e "\ndirectory $m:"
+					echo lstfile[$m]: ${lstfile[$m]}
+					echo directory[$m]_temporary_object:
+					echo dirname_name: ${dirname_name}
+					echo dirname_path: ${dirname_path}
+					echo true_path: ${true_path}
+					echo explstall[@]: ${explstall[@]}
+					echo explstfile[@]: ${explstfile[@]}
+					echo explstdir[@]: ${explstdir[@]}
+					echo explstdirname[@]: ${explstdirname[@]}
+					echo explstfilename[@]: ${explstfilename[@]}
+					echo directory[$m]_generated_object number_of_object:
+					echo name_list[@]: ${name_list[@]}  ${#name_list[@]}
+					echo file_list[@]: ${file_list[@]}  ${#file_list[@]}
+					echo file_size[@]: ${file_size[@]}  ${#file_size[@]}
+					echo dir_list[@]: ${dir_list[@]}  ${#dir_list[@]}
+					echo req_id[@]: ${req_id[@]}  ${#req_id[@]}
+					echo empty_dir_to_create[@]: ${empty_dir_to_create[@]}  ${#empty_dir_to_create[@]}
+				fi >&2
+				
+			elif [[ -S ${lstfile[$m]} && -p ${lstfile[$m]} ]]
+			then
+				echo -e "${GREY}Skipping socket/pipe ${lstfile[$m]}!${norm}" >&2
+	
+			elif [[ -f ${lstfile[$m]} ]]
+			then
+				[[ ! -S $entry && ! -p $entry && ! -c $entry ]]
+				file_size+=($(stat -L --printf="%s" ${lstfile[$m]}))
+				dir_list+=($(echo -n ${dir_name}| base64 -w0;echo))
+				name_list+=($(echo -n ${lstfile[$m]}|grep -o '[^/]*$'))
+				file_list+=(${lstfile[$m]})
+				req_id+=($(($rid-$m)))
+
+				if [[ $debug == 1 ]] 
+				then
+					echo -e "\nfile $m:"
+					echo lstfile[$m]: ${lstfile[$m]}
+					echo file[$m]_generated_object number_of_object:
+					echo name_list[@]: ${name_list[@]} ${#name_list[@]}
+					echo file_list[@]: ${file_list[@]} ${#file_list[@]}
+					echo file_size[@]: ${file_size[@]} ${#file_size[@]}
+					echo dir_list[@]: ${dir_list[@]} ${#dir_list[@]}
+					echo req_id[@]: ${req_id[@]} ${#req_id[@]}
+				fi >&2
+			
+			else	
+			[[ ! -f ${lstfile[$m]} ]] \
+			&& echo -e "${RED}\n${lstfile[$m]} not found !\n${norm}" \
+			&& error=1 && break 3
+			fi
+			((m++))
+			done
+		fi
+	((idparam++))
+    done
+
+	if [[ "${debug}" == "1" ]]
+	then
+		echo -e "\nLIST VARIABLES:"
+		echo nameparam[@]=${nameparam[@]}
+		echo valueparam[@]=${valueparam[@]} 
+		echo lstfile[@]: ${lstfile[@]}
+		echo -e "\nGLOBAL VARIABLES:"
+		echo total_array_generated_object number_of_object:
+		echo name_list[@]: ${name_list[@]} ${#name_list[@]}
+		echo file_size[@]: ${file_size[@]} ${#file_size[@]}
+		echo dir_list[@]: ${dir_list[@]} ${#dir_list[@]}
+		echo req_id[@]: ${req_id[@]} ${#req_id[@]}
+		echo file_list[@]: ${file_list[@]} ${#file_list[@]}
+		echo empty_dir_to_create[@]: ${empty_dir_to_create[@]}  ${#empty_dir_to_create[@]}
+		echo mode=$mode 
+		echo dir_name=$dir_name
+	fi >&2
+	
+	if [[ "${error}" != "1" ]]
+	then	
+		[[  "${debug}" == "1" ]] && echo -e "\nUPLOAD OBJECT:" >&2
+		local o=0
+		while [[ "${file_list[$o]}" != "" ]]
+		do	
+		ul_param_object[$o]+="{\"action\":\"upload_start\",\"request_id\":\"${req_id[$o]}\",\"size\":\"${file_size[$o]}\",\"dirname\":\"${dir_list[$o]}\",\"filename\":\"${name_list[$o]}\",\"force\":\"${mode}\"}"
+		size[$o]=${file_size[$o]}
+		[[ "${debug}" == "1" ]] \
+			&& echo ul_param_object[$o]=${ul_param_object[$o]}
+			((o++))
+		done
+
+		if [[ "${debug}" == "1" ]]
+		then
+			echo -e "\nGLOBAL UPLOAD OBJECT"
+			echo empty_dir_to_create[@]: ${empty_dir_to_create[@]}
+			echo file_list[@]=${file_list[@]} 
+			echo size[@]=${size[@]}
+	    		echo req_id[@]=${req_id[@]}
+			echo ul_param_object[@]=${ul_param_object[@]}
+		fi >&2
+		echo -e "\n${LRED}${#file_list[@]} ${WHITE}files will be upload:${norm}\n"
+		if [[ ${#file_list[@]} -le 135 ]]
+		then
+			local v=0
+			while [[ ${file_list[$v]} != "" ]] 
+			do
+				printf "\e\r[K${GREY}%-50s %-3s %-50s${norm}\n" "${file_list[$v]}" "-->" "$(echo -n ${dir_list[$v]}|base64 -d| sed -e 's|/$||' -e 's|$|/|')"
+				((v++))
+			done
+			local transfer_size=$(du -Lcsh ${file_list[@]} | tail -1 | awk '{print $1}')
+			echo -e "\r\n${GREY}Total transfer: ${LRED}${#file_list[@]} ${GREY}files => total size: ${LRED}${transfer_size}${norm}"
+		else	
+			local transfer_size=$(du -Lcsh ${file_list[@]} | tail -1 | awk '{print $1}')
+			echo -e "${GREY}<file list too big to be print>${norm}"
+			echo -e "\n${GREY}Total transfer: ${LRED}${#file_list[@]} ${GREY}files => total size: ${LRED}${transfer_size}${norm}"
+		fi
+
+	fi
+else
+	param_direct_ul_err
+fi	
+return 0
+}
+
+list_direct_upload () {
+auto_relogin
+local idupl=0 k=0 idtsk=$1
+answer=$(get_freebox_api upload/${idtsk})
+        print_term_line 105
+	[[ "${action}" != "show" ]] \
+       && echo -e "\t\t${WHITE}IN-PROGRESS / FAILED / NOT FINALIZED OR UNCOMPLETED DIRECT UPLOAD${norm}" \
+       || echo -e "\t\t\t\t${WHITE}DIRECT UPLOAD TASK: ${idtsk}${norm}"
+
+        print_term_line 105
+	[[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+        [[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 #debug
+if [[ "${action}" == "show" && "${idtsk}" != "" ]]
+then
+	local id=$(get_json_value_for_key $answer result.id)
+	local upload_name=$(get_json_value_for_key $answer result.upload_name)
+	local status=$(get_json_value_for_key $answer result.status)
+	local dirname=$(get_json_value_for_key $answer result.dirname)
+	local uploaded=$(get_json_value_for_key $answer result.uploaded)
+	local start_date=$(get_json_value_for_key $answer result.start_date)
+	local last_update=$(get_json_value_for_key $answer result.last_update)
+	local size=$(get_json_value_for_key $answer result.size)
+        [[ ${uploaded} != '0' ]] && uploaded=$(scale_unit ${uploaded} std)
+        [[ ${size} == '' ]] && size="null"
+        [[ ${size} != '0' && ${size} != 'null' ]] \
+                && size=$(scale_unit ${size} std)
+        start_date=$(date "+%Y%m%d-%H:%M:%S" -d@${start_date})
+        last_update=$(date "+%Y%m%d-%H:%M:%S" -d@${last_update})
+	[[ ${id} == "" ]] && echo -e "\n${RED}No upload tasks to list !${norm}\n" && break 
+	if [[ "${status}" == 'failed' ]]
+        then
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${GREEN}%-10s \t${WHITE}%10s ${GREEN}%-10s${norm}\n" "id:" "${id}" "first_upload:" "${start_date}" "last_update:" "${last_update}" 
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size}" "remote filename:" "${upload_name}"
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded}" "remote dirname:" "${dirname}"
+        print_term_line 105
+	elif [[ "${status}" == 'done' ]]
+        then 
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LBLUE}%-10s \t${WHITE}%10s ${LBLUE}%-10s${norm}\n" "id:" "${id}" "first_upload:" "${start_date}" "last_update:" "${last_update}"
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size}" "remote filename:" "${upload_name}"
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded}" "remote dirname:" "${dirname}"
+        print_term_line 105
+	elif [[ "${status}" == 'cancelled' ]]
+	then
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${GREY}%-10s \t${WHITE}%10s ${GREY}%-10s${norm}\n" "id:" "${id}" "first_upload:" "${start_date}" "last_update:" "${last_update}"
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${PURPL}%-50s${norm}\n" "filesize:" "${size}" "remote filename:" "${upload_name}"
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${PURPL}%-50s${norm}\n" "uploaded:" "${uploaded}" "remote dirname:" "${dirname}"
+        print_term_line 105
+	elif [[ "${status}" == 'in_progress' || "${status}" != "" ]]
+	then
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${PINK}%-10s \t${WHITE}%10s ${PINK}%-10s${norm}\n" "id:" "${id}" "first_upload:" "${start_date}" "last_update:" "${last_update}"
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size}" "remote filename:" "${upload_name}"
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded}" "remote dirname:" "${dirname}"
+        print_term_line 105
+	fi
+else
+        while [[ $(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].id") != "" ]] 
+        do
+        local id[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].id"|cut -d' ' -f3)
+	[[ ${id[$idupl]} == "" ]] && echo -e "\n${RED}No upload tasks to list !${norm}\n" && break 
+        local upload_name[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].upload_name"|cut -d' ' -f3)
+        local status[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].status"|cut -d' ' -f3)
+        local dirname[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].dirname"|cut -d' ' -f3)
+        local uploaded[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].uploaded"|cut -d' ' -f3)
+        local start_date[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].start_date"|cut -d' ' -f3)
+        local last_update[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].last_update"|cut -d' ' -f3)
+        local size[$idupl]=$(echo -e "${cache_result[@]}" |egrep "result\[$idupl\].size"|cut -d' ' -f3)
+	[[ ${uploaded[$idupl]} != '0' ]] && uploaded[$idupl]=$(scale_unit ${uploaded[$idupl]} std)
+	[[ ${size[$idupl]} == '' ]] && size[$idupl]="null"
+	[[ ${size[$idupl]} != '0' && ${size[$idupl]} != 'null' ]] \
+		&& size[$idupl]=$(scale_unit ${size[$idupl]} std)
+	start_date[$idupl]=$(date "+%Y%m%d-%H:%M:%S" -d@${start_date[$idupl]})
+	last_update[$idupl]=$(date "+%Y%m%d-%H:%M:%S" -d@${last_update[$idupl]})
+	if [[ "${status[$idupl]}" == 'failed' ]]
+        then
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${GREEN}%-10s \t${WHITE}%10s ${GREEN}%-10s${norm}\n" "id:" "${id[$idupl]}" "first_upload:" "${start_date[$idupl]}" "last_update:" "${last_update[$idupl]}" 
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size[$idupl]}" "remote filename:" "${upload_name[$idupl]}"
+	printf "\e[K${light_purple_sed}FAILED-${RED}$k ${WHITE}%10s ${GREEN}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded[$idupl]}" "remote dirname:" "${dirname[$idupl]}"
+        print_term_line 105
+	elif [[ "${status[$idupl]}" == 'done' ]]
+        then 
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LBLUE}%-10s \t${WHITE}%10s ${LBLUE}%-10s${norm}\n" "id:" "${id[$idupl]}" "first_upload:" "${start_date[$idupl]}" "last_update:" "${last_update[$idupl]}"
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size[$idupl]}" "remote filename:" "${upload_name[$idupl]}"
+	printf "\e[K${LGREEN}UPLOAD-${RED}$k ${WHITE}%10s ${LBLUE}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded[$idupl]}" "remote dirname:" "${dirname[$idupl]}"
+        print_term_line 105
+	elif [[ "${status[$idupl]}" == 'cancelled' ]]
+	then
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${GREY}%-10s \t${WHITE}%10s ${GREY}%-10s${norm}\n" "id:" "${id[$idupl]}" "first_upload:" "${start_date[$idupl]}" "last_update:" "${last_update[$idupl]}"
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${PURPL}%-50s${norm}\n" "filesize:" "${size[$idupl]}" "remote filename:" "${upload_name[$idupl]}"
+	printf "\e[K${LLBLUE}CANCEL-${RED}$k ${WHITE}%10s ${GREY}%10s ${WHITE}%18s ${PURPL}%-50s${norm}\n" "uploaded:" "${uploaded[$idupl]}" "remote dirname:" "${dirname[$idupl]}"
+        print_term_line 105
+	elif [[ "${status[$idupl]}" == 'in_progress' || "${status[$idupl]}" != "" ]]
+	then
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${PINK}%-10s \t${WHITE}%10s ${PINK}%-10s${norm}\n" "id:" "${id[$idupl]}" "first_upload:" "${start_date[$idupl]}" "last_update:" "${last_update[$idupl]}"
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "filesize:" "${size[$idupl]}" "remote filename:" "${upload_name[$idupl]}"
+	printf "\e[K${LRED}RUNNING-${RED}$k ${WHITE}%10s ${PINK}%10s ${WHITE}%18s ${LORANGE}%-50s${norm}\n" "uploaded:" "${uploaded[$idupl]}" "remote dirname:" "${dirname[$idupl]}"
+        print_term_line 105
+	fi
+	((idupl++))
+	((k++))
+	done
+fi
+}
+
+show_direct_upload () {
+        local id="$1"
+        action=show
+        error=0
+        check_and_feed_direct_ul "${@}"
+        if [[ ${error} -eq 0 ]]
+        then
+		list_direct_upload ${id}
+	fi
+	unset action
+}
+
+get_direct_upload () {
+        local id="$1"
+        action=get
+        error=0
+        check_and_feed_direct_ul "${@}"
+        if [[ ${error} -eq 0 ]]
+        then
+        	local result=$(get_freebox_api "/upload/$id")
+        	[[ "${result}" =~ ^"{\"success\":true" ]] \
+		&& colorize_output ${result//\\/}
+	fi
+}
+
+delete_direct_upload () {
+        local id="$1"
+        action=delete
+        error=0
+        check_and_feed_direct_ul "${@}"
+        if [[ ${error} -eq 0 ]]
+        then
+        local result=$(del_freebox_api "/upload/$id")
+        [[ "${result}" =~ ^"{\"success\":true" ]] \
+&& echo -e " 
+${WHITE}Upload $id sucessfully deleted:${norm}  ${GREEN} 
+${result//\\/}
+${norm}" 
+fi
+}
+
+cancel_direct_upload () {
+        local id="$1"
+        action=cancel
+        error=0
+        check_and_feed_direct_ul "${@}"
+        if [[ ${error} -eq 0 ]]
+        then
+        local result=$(del_freebox_api "/upload/$id/cancel")
+        [[ "${result}" =~ ^"{\"success\":true" ]] \
+&& echo -e " 
+${WHITE}Upload $id sucessfully canceled:${norm}  ${GREEN} 
+${result//\\/}
+${norm}" 
+fi
+}
+
+
+clean_shm_ul_files () {
+# cleaning shared memory files
+rm -f /dev/shm/lastreply_$wspid
+rm -f /dev/shm/allreply_$wspid
+rm -f /dev/shm/progress_$wspid
+rm -f /dev/shm/tcpfifo_$wspid
+}
+
+make_shm_ul_files () {
+# creating shared memory files
+touch /dev/shm/lastreply_$wspid
+touch /dev/shm/allreply_$wspid
+touch /dev/shm/progress_$wspid
+mkfifo /dev/shm/tcpfifo_$wspid
+}
+
+direct_upload () {
+# WARNING due to file descriptors this function include sub-functions which inherit files descriptors
+# of the parent function files descriptors. 
+# Those sub-functions can ONLY work in the context of this function (not the entire script) 
+local tcp_host=127.0.0.1
+local tcp_port=$1
+local fd0=$2
+local fd1="fd1"
+local CR=$(echo -en "\r") # carriage return
+#local width=$(stty -a <$(tty) | grep -Po '(?<=columns )\d+')
+local start_time=$(date +%s)
+local act=
+local reqid=
+local state=
+local error_code=
+local file_size=
+local total_len=
+local msg=
+local size_todo=""
+local round=""    # finalization round
+local skip=""     # skip upload (resume)
+local jump=0      # jump upload (resume)
+local k=0
+
+clean_shm_ul_files                              # clean eventual old shared memory files
+make_shm_ul_files				# create shared memory files	
+exec {fd0}<>/dev/tcp/${tcp_host}/${tcp_port}    # connect {fd} to tcp pipe
+#exec {fd1}<>/dev/shm/tcpfifo_$wspid             # creating non-blocking fifo pipe
+
+if [[ ${debug} == "1" ]] 
+then	
+	while read <&${fd0}
+	do 
+		wsreply=${REPLY//$CR/}
+		echo ${wsreply} >/dev/shm/lastreply_$wspid
+		echo ${wsreply} >>/dev/shm/allreply_$wspid
+		[[ ${trace} == "1" ]] && echo ${wsreply}
+	done &
+else
+	( while read <&${fd0}
+	do 
+		wsreply=${REPLY//$CR/}
+		echo ${wsreply} >/dev/shm/lastreply_$wspid
+		echo ${wsreply} >>/dev/shm/allreply_$wspid
+	done & )
+fi	
+
+
+
+direct_upload_test_resume () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+[[ "${debug}" == "1" ]] \
+&& echo -e "$(echo ${ul_param_object[$k]} | sed -e 's/,"force":"resume"//') >&${fd0}" >&2
+echo ${ul_param_object[$k]} | sed -e 's/,"force":"resume"//' >&${fd0}
+sleep 1 && wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+[[ ${debug} == "1" ]] \
+	&& echo -e "wsreply0r=${wsreply_ul}" >&2
+[[ $(echo ${wsreply_ul} | grep 'destination_conflict') != "" ]] \
+	&& error_code=$(get_json_value_for_key "$wsreply_ul" "error_code") \
+	&& msg=$(get_json_value_for_key "$wsreply_ul" "msg") \
+	&& file_size=$(get_json_value_for_key "$wsreply_ul" "file_size") \
+	&& echo -e "${WHITE}File exist: trying to resume...${norm}"
+}
+
+direct_upload_create_dir () {
+local dir_to_create=${1}	
+local n=2 \
+&& local root_dir=$(echo ${dir_to_create} | cut -d/ -f2) \
+&& while [[ "$(echo ${dir_to_create} | cut -d/ -f$(($n+1)))" != "" ]]
+   do
+        local pret=$pretty
+        pretty=0
+        local next_dir=$(echo ${dir_to_create} | cut -d/ -f$(($n+1)))
+        #trap "root_dir=$root_dir/$next_dir; ((n++)); continue" INT
+        trap '' INT
+        local resmk=$(mkdir_fs_file parent=/$root_dir dirname=$next_dir 2>/dev/null)
+        [[ "$(echo -e "$resmk" | grep '{"success":true,')" != "" ]] \
+        && echo -e "${WHITE}mkdir_fs_file parent=/$root_dir dirname=$next_dir ${GREEN}[OK!]${norm}"  \
+	|| ([[ "${debug}" == "1" ]] \
+	    && echo -e "${WHITE}mkdir_fs_file parent=/$root_dir dirname=$next_dir\n${RED}$resmk${norm}")
+        root_dir=$root_dir/$next_dir
+        pretty=$pret
+        ((n++))
+        [[ "${debug}" == "1" ]] && echo -e "n=$n" \
+        && echo -e "root_dir=$root_dir" \
+        && echo -e "next_dir=$next_dir" >&2
+        trap - INT
+done
+}
+
+direct_upload_create_remote_path () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+[[ "${debug}" == "1" ]] && echo -e "direct_upload_create_remote_path:"
+[[ $(echo ${wsreply_ul} | grep 'path_not_found' | grep 'upload_start') != "" ]] \
+	&& echo -e "${RED}Remote path not found... Creating new directory !${norm}" \
+	&& direct_upload_create_dir $dir_text
+	#&& local n=2 \
+} 
+
+direct_upload_create_empty_dir () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+#local n=2
+[[ "${debug}" == "1" ]] && echo -e "direct_upload_create_empty_dir:"
+[[ "${#empty_dir_to_create[@]}" -ne "0" ]] \
+&& echo -e "\n${WHITE}Creating destination path and ${LRED}${#empty_dir_to_create[@]}${WHITE} empty directory:${norm}\n" \
+&& direct_upload_create_dir $dir_name 
+for entry in ${empty_dir_to_create[@]}; 
+do
+	direct_upload_create_dir $entry
+done	
+}
+
+direct_upload_dd_chunk () {	
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'
+LC_ORIG=$(env | grep LANG |cut -d= -f2-)
+LANG=en_US
+if [[ "$state" == "true" && "$act" == "upload_start" ]]
+then
+	[[ "${debug}" == "1" ]] \
+	&& echo -e "dd if=${file_list[$k]} ${resume} bs=512K status=progress| base64 -w$((512*1024)) |sed -e \'s/^/B/\' >&${fd0}" >&2
+	dd if=${file_list[$k]} ${resume} bs=512K status=progress| base64 -w$((512*1024)) |sed -e 's/^/B/' >&${fd0} 
+sleep 1
+fi 2> >( grep -Ev 'record|records|enregistrements|registrazioni' | grep ${size_todo} | xargs -I@ echo -e "\n${GREEN}@${norm}" )
+LANG=$LC_ORIG
+}
+
+direct_upload_total_len () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+	wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+	if [[ "${size[$k]}" -ne "0" ]]
+	then
+	[[ $(echo ${wsreply_ul} | grep 'upload_data' | grep 'total_len') != "" ]] \
+	&& total_len=$(get_json_value_for_key $wsreply_ul result.total_len) \
+	|| echo -e "${RED}\nERROR: reply must contains 'total_len'\n${wsreply_ul}${norm}" >&2
+	else
+	echo -e "${LRED}EMPTY FILE: 0 byte transfer${norm}" >&2
+	fi
+}
+
+direct_upload_no_progress () {
+# no progress function when pretty=0
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+printf "${WHITE}Sending data chunk...${norm}\r"
+local sleep="0.05"
+
+echo $BASHPID >/dev/shm/progress_$wspid
+direct_upload_total_len 2>/dev/null
+
+[[ ${debug} == "1" ]] \
+&& echo -e "file_size=$file_size size_todo=$size_todo my_time_launch=$my_time" \
+&& echo wsreply_ul=${wsreply_ul} >&2
+
+while true
+do
+	[[ "${total_len}" == "${size_todo}" ]] && break
+	[[ "$(echo ${wsreply_ul} | grep 'upload_cancelled')" != "" ]] \
+	&& kill $(ps -ef | grep "dd if=${file_list[$k]}" | grep  "bs=512K status=progress" |grep -v grep |awk '{print $2}') \
+	&& echo -e "${LRED}\nUPLOAD CANCELLED: Killing data transfer${norm}" \
+	&& break
+        sleep ${sleep}	
+	direct_upload_total_len 2>/dev/null
+done
+}
+
+direct_upload_progress_bar () {
+# upload dedicated progress() function using "Pipe Viewer" style
+local w=$(($(tput cols)-40)) p=$1;  shift
+printf -v dots "%*s" "$(( $p*$w/100 ))" ""; dots=${dots// /=};
+printf "\r\e[K${WHITE}[%-*s] %3d%% %s ${LORANGE}%s${norm}" "$w" "${dots}>" "$p" "$1" "$2";
+}
+
+direct_upload_progress () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+local progress=""
+local sleep="0.05"
+local size_done=""
+local size_todo_scale=""
+local my_time=$(date +%s)
+local upload_speed=""
+local spinstr='|/-\'
+#local spinend='◉'
+local spinend='-'
+local spinok='✔' 
+
+echo $BASHPID >/dev/shm/progress_$wspid
+# waiting from API chunk reply 
+wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+while [[ "$(echo ${wsreply_ul} | grep 'upload_data' )" == "" ]]
+do
+	local temp=${spinstr#?}
+	printf "\e[K${WHITE}%s ${LORANGE}[%c] ${WHITE}%s${norm}\r" "Sending data chunk:" "$spinstr" "waiting from API progress reply..."
+	spinstr=$temp${spinstr%"$temp"}
+	sleep $sleep
+	wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+done
+printf "\e[K${WHITE}%s ${LORANGE}[%b] ${WHITE}%s ${LORANGE}[%b]${norm}\r" "Sending data chunk:" "$spinend" "waiting from API progress reply..." "$spinok"
+echo
+direct_upload_total_len 2>/dev/null
+
+# avoiding divide by 0
+[[ "${total_len}" == "" ]] && total_len="1"
+[[ "${progress}" == "" ]] && progress="1"
+[[ "${file_size}" == "" ]] && file_size="0"
+
+[[ ${debug} == "1" ]] \
+&& echo -e "file_size=$file_size size_todo=$size_todo progress=$progress my_time_launch=$my_time" \
+&& echo wsreply_ul=${wsreply_ul} >&2
+
+while true	
+do
+	my_time=$(date +%s)
+	local time_elapsed=$((${my_time}-${start_time}))
+	[[ "${time_elapsed}" -lt "1" ]] && time_elapsed="1"
+
+	upload_speed=$((${total_len}/${time_elapsed}))
+	upload_speed=$(scale_unit ${upload_speed} std /s)
+
+	size_done=$((${total_len}+${file_size})) # resume progress bar start at ${file_size}
+	size_done=$(scale_unit ${size_done} std)
+
+	size_todo_scale=${size[$k]} # resume progress bar end at ${size[$k]}
+	size_todo_scale=$(scale_unit ${size_todo_scale} std)
+
+[[ "${total_len}" == "${size_todo}" ]] && progress=100 # when transfer end before API progress reply
+	
+direct_upload_progress_bar "${progress}" "${size_done} / ${size_todo_scale}" "${upload_speed}"
+echo $BASHPID >/dev/shm/progress_$wspid
+
+[[ "${total_len}" == "${size_todo}" ]] && break
+
+[[ "$(echo ${wsreply_ul} | grep 'upload_cancelled')" != "" ]] \
+	&& kill $(ps -ef | grep "dd if=${file_list[$k]}" | grep  "bs=512K status=progress" |grep -v grep |awk '{print $2}') \
+	&& echo -e "${LRED}\nUPLOAD CANCELLED: Killing data transfer${norm}" \
+	&& break 
+
+#sleep "${sleep}"
+direct_upload_total_len 2>/dev/null
+
+#resume progress bar start at ${file_size} and end at ${size[$k]}
+progress=$(echo $((${total_len}+${file_size})) ${size[$k]} | awk '{printf ("%.3f\n", (($1/$2)*100))}'| cut -d'.' -f1)
+[[ "${progress}" -lt "1" ]] && progress=1
+done
+}
+
+direct_upload_finalize () {
+# WARNING due to file descriptors this sub-function is only relevant in function 'direct_upload'	
+	[[ ${debug} == "1" ]] \
+		&& echo -e "{\"action\":\"upload_finalize\",\"request_id\":$reqid}" >&2
+	echo -e "{\"action\":\"upload_finalize\",\"request_id\":$reqid}" >&${fd0}
+	sleep 1
+	wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+	[[ "${debug}" == "1" ]] \
+		&& echo -e "wsreply_finalize=${wsreply_ul}" >&2
+	echo ${wsreply_ul} |grep '{"action":"upload_finalize"' |grep -q 'complete' \
+	&& local result=$(get_json_value_for_key ${wsreply_ul} "result.complete") \
+	|| echo -e "${RED}\nERROR:\nInvalid JSON !\n${norm}">&2
+        trap 'sleep 1' INT	
+	[[ ${result} == "true" ]] \
+		&& echo -e "${WHITE}File transfer ${GREEN}$k${WHITE} completed: ${dir_text%/}/${filename}${norm}" \
+		&& ls_fs ${dir_text%/}/${filename}
+	trap - INT
+
+	[[ ${result} == "false" && "$round"=="finalized" ]] \
+		&& echo -e "${RED}\nERROR:\nUpload finalization failed !${norm}">&2 \
+
+	[[ ${result} == "false" && "$round"=="" ]] \
+		&& round="finalized" \
+		&& echo -e "${RED}\nERROR:\nRetrying finalization...${norm}">&2 \
+		&& direct_upload_finalize 
+} 
+
+if [[ ${file_list[@]} != "" ]]
+then
+    direct_upload_create_empty_dir
+    while [[ ${file_list[$k]} != "" ]]
+    do
+	local filename=$(echo -n ${file_list[$k]}|grep -o '[^/]*$')
+	local dir_text=$(echo -n ${dir_list[$k]}|base64 -d)
+	error_code="" msg="" file_size="" total_len="" act="" reqid="" state=""
+	echo -e "${WHITE}\nUploading file${GREEN} $k${WHITE} from local machine to Freebox storage:${norm}"
+	echo -e "${PURPL}${file_list[$k]} ---> ${GREEN}${dir_text%/}/${filename}${norm}"
+	echo -e "${WHITE}Websocket upload start:${norm}"
+	
+
+	if [[ "$mode" == "resume" ]] 
+	then
+		skip=0 resume="" jump="0"
+		direct_upload_test_resume
+		direct_upload_create_remote_path \
+		&& direct_upload_test_resume
+		
+		[[ $(echo ${wsreply_ul} | grep -v 'destination_conflict' | grep 'upload_start') != "" ]] \
+			&& jump=1 \
+			&& echo -e "${RED}Remote file does not exist... Starting new transfer !${norm}"
+		[[ "${jump}" != "1" ]] && if [[ "${file_size}" -ne "${size[$k]}" ]] 
+		then	
+			resume="skip=${file_size}B"
+		        [[ "${file_size}" == "" ]] && file_size=0	
+                	echo -e "${RED}Resuming transfer at byte $((${file_size}+1)) ...${norm}"
+			resume="skip=${file_size}B" 
+		else
+			skip=1
+			echo -e "${RED}Nothing to resume... Skipping transfer !${norm}"	
+			ls_fs ${dir_text%/}/${filename}
+		fi
+
+		[[ ${debug} == "1" && "${jump}" != "1" ]] \
+			&& echo -e "${WHITE}  file_size: ${RED}${file_size}${norm}" \
+			&& echo -e "${WHITE}     resume: ${RED}${resume}${norm}" \
+			&& echo -e "${WHITE}\tmsg: ${RED}${msg}${norm}" \
+			&& echo -e "${WHITE} error_code: ${RED}${error_code}${norm}" >&2 
+	fi
+	
+      if [[ "${skip}" != "1" ]] 
+      then
+	[[ "${debug}" == "1" && "${jump}" != "1" ]] \
+		&& echo -e "${ul_param_object[$k]} >&${fd0}" >&2
+	[[ "${jump}" != "1" ]] \
+		&& echo ${ul_param_object[$k]} >&${fd0}
+	sleep 1 && wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+	[[ "${jump}" != "1" ]] \
+		&& direct_upload_create_remote_path \
+		&& echo ${ul_param_object[$k]} >&${fd0} 
+	sleep 1 && wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+	[[ ${debug} == "1" ]] && echo -e "wsreply0o=${wsreply_ul}" >&2
+	[[ $(echo ${wsreply_ul} | grep 'upload_start') != "" ]] \
+	&& act=$(get_json_value_for_key "$wsreply_ul" "action") \
+	&& reqid=$(get_json_value_for_key "$wsreply_ul" "request_id") \
+	&& state=$(get_json_value_for_key "$wsreply_ul" "success")
+	if [[ "$state" == "false" ]]
+	then
+		[[ $(echo ${wsreply_ul} | grep 'Invalid action upload_start') != "" ]] \
+		&& local error_code=$(get_json_value_for_key "$wsreply_ul" "error_code") \
+		&& local msg=$(get_json_value_for_key "$wsreply_ul" "msg") \
+		&& echo -e "${RED}\nERROR:${norm}" >&2 \
+		&& echo -e "${RED}Get 'upload_start' BUT another action was expected !${norm}" >&2 \
+		&& echo -e "${GREY}\nERROR DETAIL ${GREY}[RECIEVED STRING]:${norm}" >&2 \
+		&& echo -e "${WHITE}${wsreply_ul}${norm}" >&2 \
+		&& echo -e "${GREY}\nERROR DETAIL ${GREY}[API ERROR]:${norm}" >&2 \
+		&& echo -e "${WHITE}\tmsg: ${RED}${msg}${norm}" >&2 \
+		&& echo -e "${WHITE} error_code: ${RED}${error_code}${norm}" >&2 
+		[[ ${debug} == "1" ]] && echo -e "wsreply0b=${wsreply_ul}" >&2
+		break 2
+	fi
+        [[ "${file_size}" == "" ]] && file_size=0	
+	size_todo=$((${size[$k]}-${file_size}))
+	start_time=$(date +%s)
+	[[ ${debug} == "1" ]] && echo -e "start_time=${start_time}" >&2
+
+	if [[ ${size[$k]} -ne '0' ]]
+	then
+		[[ ${pretty} != "0" ]] \
+		&& (direct_upload_progress &) \
+		|| (direct_upload_no_progress &)
+		direct_upload_dd_chunk
+	fi	
+
+	sleep 2
+	# killing (no)progress bar if it still exist after transfer (ie: transfer failed)	
+	[[ -d "/proc/$(cat /dev/shm/progress_$wspid)" ]] \
+		&& (kill $(cat /dev/shm/progress_$wspid) 2>&1) >/dev/null
+	direct_upload_total_len
+
+	wsreply_ul=$(cat /dev/shm/lastreply_$wspid)
+	[[ "$(echo ${wsreply_ul} | grep 'upload_cancelled')" != "" ]] \
+	&& echo -e "${LRED}\nUPLOAD CANCELLED:\nWebsocket data connection closed... EXIT!${norm}" \
+	&& break 
+
+	[[ ${debug} == "1" ]] \
+	&& echo -e "wsreply1=$wsreply_ul\nsize[$k]=${size[$k]}\ntotal_len=$total_len" >&2
+
+	if [[ "${mode}" == "overwrite"  && "${total_len}" -eq "${size[$k]}" ]]
+	then	
+		direct_upload_finalize
+
+	elif [[ "${mode}" == "overwrite"  && "${size[$k]}" -eq "0" ]]
+	then	
+		direct_upload_finalize
+
+	elif [[ "${mode}" == "resume"  && "${size[$k]}" -eq "0" ]]
+	then	
+		direct_upload_finalize
+	elif [[ "${mode}" == "resume" \
+		&& "$((${file_size}+${total_len}))" -eq "${size[$k]}" \
+		&& "${total_len}" != "" \
+		&& "${jump}" != "1" ]]
+	then	
+		echo -e "${WHITE}Resume size ${GREEN}[OK!]${norm}"
+		direct_upload_finalize
+
+	elif [[ "${mode}" == "resume" \
+		&& "$((${file_size}+${total_len}))" -ne "${size[$k]}" \
+		&& "${total_len}" != "" \
+	       	&& "${jump}" != "1" ]]
+	then	
+		echo -e "${RED}ERROR:\nResume size differ from local size. Upload may be uncompleted or corrupted...${norm}"
+		direct_upload_finalize
+		
+	elif [[ "${mode}" == "resume" && "${jump}" == "1" ]]
+	then	
+		if [[ "${total_len}" -eq "${size[$k]}" ]]
+		then
+			echo -e "${WHITE}New transfer size ${GREEN}[OK!]${norm}"
+			direct_upload_finalize
+		else
+			echo -e "${RED}\nERROR:\nNew transfer size differ from local size. Upload may be uncompleted or corrupted...${norm}"
+			direct_upload_finalize
+		fi	
+	else 
+		echo -e "${RED}\nERROR:\nSize differ between source and destination file !\n${norm}" >&2
+	        [[ ${debug} == "1" ]] && echo -e "\nwsreply2b=${wsreply_ul}" >&2
+	fi
+      fi
+    ((k++))	
+    done
+fi
+# closing file descriptors (do not use '-t': fd do not point to tty so testing link instead: '-L')
+[[ -L /dev/fd/${fd0} ]] && exec {fd0}>&-
+# killing remaining process (no process should remains but in case of...)
+[[ "$(jobs -p)" != "" ]] && kill $(jobs -p)
+clean_shm_ul_files                 # clean eventual old shared memory files after closing {fd}
+}
+
+
+local_direct_ul_api () {
+check_login_freebox || (echo -e "${RED}You must login to access this function: auth_required${norm}" && ctrlc)
+    local api_url="ws/upload"
+    local options=("")
+    local optssl=("")
+    local optws=("")
+    local optsttys=("")
+    local optsttye=("")
+    local req=("")
+    local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    local wsurl=$(echo $url |sed 's@https@wss@g')
+    local tcp_port="2009"
+    local tcp_host="127.0.0.1"
+    local fd0="fd0"   # close file descriptor with variable : {fd}>&- (do not use ${fd} but {fd} only !)
+    local wsdebug=""
+    # defining a pseudo 'uniq' id (chance to have it twice are small enough)
+    local reqid=$(date +%s | cut -b5-10)
+    rid=${reqid##0}    # adding ##0 to avoid bash interpret $rid as octal when rid=00xxxx
+    action='ul'
+
+    check_and_feed_direct_ul ${@}
+
+if [[ ${error} != 1 ]]
+then    	
+    [[ $(pgrep websocat | wc -l) -ne '0' ]] \
+	    && tcp_port=$(($tcp_port+$(pgrep websocat | wc -l))) \
+	    && fd=$(($fd+$(pgrep websocat | wc -l)))
+    [[ "${debug}" != "1" ]] && wsdebug="-q"
+    [[ "${debug}" == "1" ]] && wsdebug="-v" \
+	    && echo -e "\nwebsocket tcp_host=$tcp_host tcp_port=$tcp_port \${fd0}=$fd0" >&2
+
+    echo -e "\nConnecting Freebox websocket : ${light_purple_sed}${wsurl}${norm_sed}"
+    [[ -n "$_SESSION_TOKEN" ]] \
+    && options+=(-H \"X-Fbx-App-Auth: $_SESSION_TOKEN\") \
+    && optws+=(--origin $FREEBOX_URL) \
+    && optws+=(--protocol \"chat, superchat\" $wsdebug) \
+    && optws+=( --ping-interval 10 --no-close --buffer-size $((512*1025)) ) \
+    && optws+=( --text --base64 --binary-prefix B tcp-listen:${tcp_host}:${tcp_port} ) 
+
+    mk_bundle_cert_file fbx-wsul-cacert                # create CACERT BUNDLE FILE
+
+    [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
+    && optssl+=("SSL_CERT_FILE=$FREEBOX_CACERT") \
+    || optws+=(-k)     
+
+    req="${optssl[@]} websocat ${options[@]} ${optws[@]} ${wsurl}"
+
+    # DEBUG :  
+    [[ "${debug}" == "1" ]] && echo ${req[@]} >&2  
+       
+    bash -c "${req[@]} &" \
+    && wspid=$(ps -ef |grep websocat |grep -Ev 'grep|bash' |grep $tcp_port |awk '{print $2}') \
+    && direct_upload ${tcp_port} ${fd0} 
+
+    [[ ! -z "$wspid" ]] \
+	    && kill -9 ${wspid} \
+	    && clean_shm_ul_files \
+	    && echo -e "\nWebsocket connection closed" 
+
+    del_bundle_cert_file fbx-wsul-cacert               # remove CACERT BUNDLE FILE
+    stty sane cooked
+    tput init
+    ctrlc
+fi    
+}
+
+pipe_tcpcon () {
+local tcp_host=127.0.0.1
+local tcp_port=$1
+local fd0=$2
+local CR=$(echo -en "\r") # carriage return
+
+rm -f /dev/shm/lastreply_$wsul_pid
+rm -f /dev/shm/allreply_$wsul_pid
+rm -f /dev/shm/tcpfifo_$wsul_pid
+
+mkfifo /dev/shm/tcpfifo_$wsul_pid
+exec {fd0}<>/dev/tcp/${tcp_host}/${tcp_port} 
+
+while read <&${fd0}
+do 
+	
+	wsreply=${REPLY//$CR/}
+	echo ${wsreply} >/dev/shm/lastreply_$wsul_pid
+	echo ${wsreply} >>/dev/shm/allreply_$wsul_pid
+	echo ${wsreply} >/dev/shm/tcpfifo_$wsul_pid &
+
+	echo -e "${CR}${wsreply}"
+done
+}
+
+
+
+###########################################################################################
+## 
+##  DIRECT ACTIONS: library direct actions (simple API call, e.g 'reboot' action)
+## 
+###########################################################################################
+
+num_id_reboot_err () {
+local id=${1}
+local dev=${device}
+[[ "$dev" == "" ]] && dev="device"
+[[ ${id} =~ ^[[:digit:]]+$ ]] \
+|| (echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a number${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}you can get a list of all ${dev} (showing all 'id'), just run: ${norm}\n${BLUE}list_${dev}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}reboot_${dev} 1 ${norm}"
+unset device
+ctrlc) >&2
+}
+
+mac_id_reboot_err () {
+local id=${1}
+local dev=${device}
+[[ "$dev" == "" ]] && dev="device"
+check_if_mac ${id} \
+|| (echo -e "\nERROR: ${RED}<param> must be :${norm}${BLUE}|id\t\t\t# id must be a mac address${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}you can get a list of all ${dev} (showing all 'id'), just run: ${norm}\n${BLUE}list_${dev}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}reboot_${dev} 34:A7:F2:C1:D2:01 ${norm}"
+unset device
+ctrlc) >&2
+}
+
+reboot_freeplug () {
+device="freeplug"
+local freeplug_id=${1}
+mac_id_reboot_err $freeplug_id
+local result=$(add_freebox_api freeplug/${freeplug_id}/reset {})
+colorize_output "${result}" || echo -e "${result}"
+}
+
+reboot_repeater () {
+device="repeater"
+local repeater_id=${1}
+num_id_reboot_err $repeater_id
+local result=$(add_freebox_api repeater/${repeater_id}/reboot {})
+colorize_output "${result}" || echo -e "${result}"
+}
+
+reboot_wifi-ap () {
+device="wifi-ap"
+local wifi_ap_id=${1}
+num_id_reboot_err $wifi_ap_id
+local result=$(add_freebox_api wifi/ap/${wifi_ap_id}/restart {})
+colorize_output "${result}" || echo -e "${result}"
+}
+
+reboot_player () {
+device="player"
+local player_id=${1}
+local api_version=""
+local idpla=0
+num_id_reboot_err $player_id
+answer=$(get_freebox_api player)
+dump_json_keys_values "$answer" >/dev/null
+while [[ $(get_json_value_for_key "$answer" "result[$idpla].id") != "" ]] 
+do
+	local id[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].id")
+	local api[$idpla]=$(get_json_value_for_key "$answer" "result[$idpla].api_version")
+	[[ "${player_id}" == "${id[$idpla]}" ]] && api_version=${api[$idpla]//\.0/}
+	((idpla++))
+done
+local result=$(add_freebox_api player/${player_id}/api/v${api_version}/system/reboot {})
+colorize_output "${result}" || echo -e "${result}"
+}
+
+reboot_freebox () {
+    # NBA modify for getting reboot status from API 
+    #call_freebox_api '/system/reboot' '{}' >/dev/null
+local result=$(call_freebox_api '/system/reboot' '{}')
+colorize_output "${result}" || echo -e "${result}"
+}
+
+shutdown_freebox () {
+    #call_freebox_api '/system/shutdown' '{}' 
+local result=$(call_freebox_api '/system/shutdown' '{}')
+colorize_output "${result}" || echo -e "${result}"
+}
+
+
 
 ###########################################################################################
 ## 
 ##  STATUS FUNCTIONS: library status function (simple API call) AND 'reboot' action
 ## 
 ###########################################################################################
-
-
-reboot_freebox () {
-    # NBA modify for getting reboot status from API 
-    #call_freebox_api '/system/reboot' '{}' >/dev/null
-    call_freebox_api '/system/reboot' '{}' 
-}
-shutdown_freebox () {
-    call_freebox_api '/system/shutdown' '{}' 
-}
 status_freebox () {
     # NBA add for getting freebox status json from API 
     call_freebox_api '/system'
@@ -5542,7 +7054,6 @@ vm_resource () {
     # NBA add for getting a json with hardware allocated to freebx vm from API 
     call_freebox_api '/vm/info'
 }
-
 
 
 ###########################################################################################
@@ -5559,7 +7070,8 @@ _check_freebox_api
 # verify you have required tools to use this library :
 # source $BASH_SOURCE && for tool in curl openssl websocat; do check_tool $tool; done 
 #
-
+# unset shell variables
+unset _FREEBOX_URL _FREEBOX_CACERT _ITALY _PASSWORD
 ######################
 
 
@@ -5583,6 +7095,7 @@ _check_freebox_api
 ## --> Command from GNU coreutils, util-linux (or similar UNIX package) are used in this library:
 ##     those command are generally installed on every *nix system and can be easily find as single
 ##     command / package if one missing on your system and you need to install it 
+## --> jq json parser is hardly recommended for fast json parsing
 ##
 ##______________________________
 ## websocat install :
@@ -5682,13 +7195,13 @@ _check_freebox_api
 # --> So, we do not need anymore external 'readline' tools like 'rlwrap' or 'rlfe'
 # --> The issue is fixed 
 # --> Accessing VM console through websocket API have the expected behaviour
+#
 #___________________________________
 # 20220509 - part 2 - code & clean : 
 # --> Cleaning code (delete) where "rlwrap" or "rlfe" were use
 # --> Replacing exec file './req' by variable "${req[@]}" containing exec string
 # --> Deleting code where './req' file appears
 # --> Adding 'DEPRECATED' mention to this changelog
-#
 #
 #___________
 # 20220510 :
@@ -5813,7 +7326,6 @@ _check_freebox_api
 #
 #--> Adding ITALY support which will use ILIADBOX_*_URL and ILIADBOX_*_CACERT
 #
-#
 #___________
 # 20221222 :
 #--> Bug corrections of *BOX_CA_BUNDLE with websocat 
@@ -5821,7 +7333,6 @@ _check_freebox_api
 #--> Adding comments to guide user configuration of library
 #--> Adding comments for each groups of functions and for some functions
 #--> Adding functions for forcing a GET request with data-www-urlencode of parameters
-#
 #
 #___________
 # 20221223 :
@@ -5846,7 +7357,6 @@ _check_freebox_api
 #	- function which manage help / error and validate NAT redirection parameters
 #--> Adding functions for managing filesystem action:
 #	- function list_fs_file: list content of a path / directory of freebox storage
-#
 #
 #______________________
 # 20221224 - 20230102 :
@@ -5880,7 +7390,6 @@ _check_freebox_api
 #--> Adding functions for managing download tasks
 #	- function which show a particular download task (pretty human readable output)
 #
-#
 #____________
 # 20230103 :
 # Some tasks (filesystem tasks, big download) can take hours and hours, really more than the login
@@ -5897,13 +7406,11 @@ _check_freebox_api
 #	- function which re-login if the session is disconnected
 #--> Modifying filesystem task and download tasks monitoring functions to add the 'relogin' function
 #
-#
 #____________
 # 20230104 :
 #--> Fixing issue on filesystem tasks monitoring 
 #--> Icing & anonimizing the code 
 #--> Publishing the code on https://github.com/nbanb  
-#
 #
 #____________
 # 20230107 :
@@ -5995,81 +7502,134 @@ _check_freebox_api
 # --> updating documentation: README.md
 #
 #__________
-#20241014
+# 20241014
 # --> adding shutdown function from API v11
 #
 #__________
-#20241016
+# 20241016
 # --> adding Wake On LAN function (WOL) to start LAN machine from Freebox W-O-L signal  
 #
 #__________
-#20241017
+# 20241017
 # --> adding 'auto_relogin' capability to Wake On LAN function
 # --> adding 'domain_list' function to list freebox domain name
 # --> adding personnal domain support (NOT DOCUMENTED !) : add domain, del domain, domain setdefault
 # --> adding certificates for personnal domains from PEM files
 #
 #__________
-#20241018
+# 20241018
 # --> adding 'check_if_domain' function to check if a string is a domain name 
 #
 #__________
-#20241020
+# 20241020
 # --> adding library `list` and `help` functions (source library with '--help' or '--list' parameter)
 #
 #__________
-#20241021
+# 20241021
 # --> adding player listing function
 # --> adding repeater listing function
 #
 #__________
-#20241023
+# 20241023
 # --> adding 'check_if_url' function to check if a string is a valid URL 
 # --> adding 'jq' json parser support https://jqlang.github.io/jq/
 # --> adding usage of 'jq' where caching result is needed (API reply big json) 
 # --> updating README.md
 #
 #__________
-#20241025
+# 20241025
 # --> adding check command file and mktemp 
 # --> updating check_tool_exit function
 #
 #__________
-#20241027
+# 20241027
 # --> adding 'rtsp' support in check_if_url() function  
 # --> adding freeplug listing function
 #
 #__________
-#20241028
+# 20241028
 # --> adding wifi radio listing function
 # --> adding support of white terminal background color (default is black background)
 #
 #__________
-#20241029
+# 20241029
 # --> adding compact_json and compact_json_jq functions (home API answer form is pretty_json!)
 # --> adding 'check' sourcing parameter to check and display required external tools
 # --> updating 'help' section
 #
 #__________
-#20241102
+# 20241102
 # --> fixing 'recursive issue' in enc_dl_task_api() function
 # --> adding help on how a string of cookie can be pass to cookie variable in enc_dl_task_api()
 #
 #__________
-#20241115
+# 20241115
 # --> adding list_fbx_access() to list application access authorisation
 # --> adding "--access' param to login_freebox(): print application authorisation after login
 # --> adding terminal background color detection
 #
 #__________
-#20241117
+# 20241117
 # --> adding support of curl8 with GNUTLS or OPENSSL backend
 # --> fixing array fullfilling issue (empty first cell of parameters array refused by curl8)
 # --> Adding bundle cacert warning for curl8 GNUTLS backend
 #
 #__________
-#20241118
+# 20241118
 # --> adding physical storage listing function
 # --> adding storage partition listing function
-# 
+#
+#__________
+# 20241119
+# --> adding reboot_player reboot_wifi-ap reboot_repeater reboot_freeplug
+#
+#__________
+# 20241120
+# --> adding debug options : [[ "${debug}" == "1" ]] && $cmd >&2
+# --> adding debug mode: --debug
+# --> adding pretty options in colorize_output*: no color if ${pretty}=0
+# --> removing unecessary debug functions (login_fbx2)
+#
+#__________
+# 20241121
+# --> modifying output of get_share_link() for better lisibility/parsing
+#
+#__________
+# 20241125
+# --> extending debug mode to websocket
+# --> extending debug mode to vncviewer over websocket
+#
+#__________
+# 20241126
+# --> fixing base64 encoding of long file name and long directory path
+# --> adding freebox websocket event monitor: vm state, vm disk task, ip v4/v6 (un)reachable
+#
+#__________
+# 20241128
+# --> starting developpement of local_direct_ul_api (upload to freebox using websocket)
+# --> fixing file descriptor redirection for 'home made bash tcp client' 
+# --> adding pipe_tcpcon() function (example of 'home made bash tcp client')
+#
+#__________
+# 20241212
+# --> adding scale_unit() function to scale unit (KiB / MiB / GiB ...)
+# --> adding list_direct_upload() / show_direct_upload() / get_direct_upload() functions
+# --> adding cancel_direct_upload() / delete_direct_upload() functions
+#
+#__________
+# 20241218
+# --> adding recursive directory upload for function local_direct_ul_api
+# --> adding configuration file support
+#
+#__________
+# 20241219
+# --> renaming progress() function to progress_line() 
+# --> adding new progress() function using Pipe Viewer (PV) style and dynamic terminal scaling
+# --> adding trace debug mode which add some extended debug information
+# --> ending developpement of local_direct_ul_api (upload to freebox using websocket)
+#
+#__________
+# 20250114
+# --> modifying timeout to 0.2s in detect_term_bg_color () to suite on weak CPU or old systems
+#
 #
