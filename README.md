@@ -124,7 +124,7 @@ Table of Contents:
 |$${\color{red}\text{Required}}$$| $${\color{red}\text{ openssl }}$$ | $${\color{red}\text{needed for authentication}}$$ |[openssl](https://github.com/openssl/openssl)|
 |$${\color{red}\text{Required}}$$| $${\color{red}\text{ coreutils }}$$ | [issue#9](https://github.com/freeboxos/freeboxos-bash-api/issues/9) $${\color{red}\text{basic Unix / Linux tools}}$$ |[GNU coreutils](https://github.com/coreutils/coreutils)|
 |$${\color{red}\text{Required}}$$| $${\color{red}\text{ file }}$$ | [issue#9](https://github.com/freeboxos/freeboxos-bash-api/issues/9) $${\color{red}\text{needed to detect PEM certificates}}$$ |[file](https://github.com/file/file)|
-|$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ websocat }}$$  | $${\color{orange}\text{needed to use websocket API (VM console...)}}$$ |[websocat](https://github.com/vi/websocat/) |
+|$${\color{red}\text{Required}}$$| $${\color{orange}\text{ websocat }}$$  | $${\color{orange}\text{needed to use websocket API (VM console...)}}$$ |[websocat](https://github.com/vi/websocat/) |
 |$${\color{orange}\text{VM required}}$$| $${\color{orange}\text{ tigervnc }}$$  | $${\color{orange}\text{needed to access VM screen over websocket}}$$ |[tigervnc](https://github.com/TigerVNC/tigervnc) |
 |$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ screen }}$$  | $${\color{yellow}\text{allow to launch VM console in a SCREEN}}$$ |[GNU screen](https://savannah.gnu.org/git/?group=screen) |
 |$${\color{yellow}\text{VM optional }}$$| $${\color{yellow}\text{ dtach }}$$  | $${\color{yellow}\text{allow to launch VM console detached from terminal}}$$ |[GNU dtach](https://github.com/crigler/dtach) |
