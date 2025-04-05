@@ -34,7 +34,7 @@ fbx-delta-nba_bash_api.sh
 | Type: | Description: |
 |:-|:---------------|
 | <h5>- NOTE 20250403:</h5> |  <h5>$${\color{red}\text{  Adding new WIKI: BASH on WINDOWS host + FRENCH QUICK START }}$$</h5> |
-| <h6>NEW WIKI PAGES:</h6> | <h6>GLOBAL [WIKI](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/raw/refs/heads/nbanb-freebox-api/local_direct_ul_api-video-example.webm) + WIKI [BASH ON WINDOWS](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/I-HAVE-A-WINDOWS-COMPUTER-%E2%80%90-NO-BASH) + WIKI [FRENCH QUICK START](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/%5BFRENCH-QUICK-START%5D-Quick-Start-en-Fran%C3%A7ais)</h6> |
+| <h6>NEW WIKI PAGES:</h6> | <h6>GLOBAL [WIKI](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki) + WIKI [BASH ON WINDOWS](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/I-HAVE-A-WINDOWS-COMPUTER-%E2%80%90-NO-BASH) + WIKI [FRENCH QUICK START](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/%5BFRENCH-QUICK-START%5D-Quick-Start-en-Fran%C3%A7ais)</h6> |
 | <h5>- NOTE 20250323:</h5> |  <h5>$${\color{red}\text{  Adding events monitor over websocket support (fg/bg) }}$$</h5> |
 | <h6>FRONTEND FUNCTION:</h6> | <h6>Monitor events (bg+fg): mon_bg_fbx_ws-events / mon_fbx_ws-events</h6> |
 | <h5>- NOTE 20250323:</h5> |  <h5>$${\color{red}\text{  Adding file and directory upload over websocket support: }}$$</h5> |
