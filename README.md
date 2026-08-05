@@ -21,7 +21,7 @@ fbx-delta-nba_bash_api.sh
 
 
 - ### 100% BASH  
-- ### APIv14 (FREEBOX) / APIv14 (PLAYER)
+- ### APIv16 (FREEBOX) / APIv16 (PLAYER)
 - ### USE AT YOUR OWN RISK
 
 
@@ -33,6 +33,11 @@ fbx-delta-nba_bash_api.sh
 
 | Type: | Description: |
 |:-|:---------------|
+| <h5>- NOTE 20260803:</h5> |  <h5>$${\color{red}\text{  Adding LAN routing table, DHCP config/options (+ compute helpers for domain\\\_search/classless\\_static\\_route), FTP/Samba/AFP network shares, }}$$ <br />$${\color{red}\text{ LAN browser, firewall DMZ/incoming ports, and IPv6 + DHCPv6 support }}$$</h5> |
+| <h6>NEW FRONTEND FUNCTIONS:</h6> | <h6>98 new functions across 12 new API areas, following the library's existing conventions throughout - see: [LAN ROUTING TABLE](#ROUTE) [DHCP CONFIG](#DHCPCFG) [DHCP OPTIONS](#DHCPOPT) [DHCP OPTION COMPUTE](#DHCPCOMP) [FTP](#FTP) [SAMBA](#SMB) [AFP](#AFP) [LAN BROWSER](#LANBROWSE) (incl. lan_host_show / lan_host_detail) [FIREWALL DMZ](#FWDMZ) [FIREWALL INCOMING](#FWIN) [IPv6](#IPV6) [DHCPv6](#DHCPV6)</h6> |
+| <h5>- NOTE 20260803:</h5> |  <h5>$${\color{purple}\text{  Fixing a column-alignment bug and an exit-status bug found in the existing library while building the above }}$$</h5> |
+| <h6>ALIGNMENT FIX:</h6> | <h6>list_fw_incoming / list_lan_routes / list_lan_hosts / list_dhcp_options / list_lan_interfaces now use printf fixed-width padding instead of a fixed tab count, so columns stay aligned regardless of value length</h6> |
+| <h6>EXIT STATUS FIX:</h6> | <h6>list_dl_task_api / list_dhcp_static_lease / list_fw_redir used to report failure when the list had exactly ONE item, even though nothing went wrong</h6> |
 | <h5>- NOTE 20250403:</h5> |  <h5>$${\color{red}\text{  Adding new WIKI: BASH on WINDOWS host + FRENCH QUICK START }}$$</h5> |
 | <h6>NEW WIKI PAGES:</h6> | <h6>GLOBAL [WIKI](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki) + WIKI [BASH ON WINDOWS](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/I-HAVE-A-WINDOWS-COMPUTER-%E2%80%90-NO-BASH) + WIKI [FRENCH QUICK START](https://github.com/nbanb/fbx-delta-nba_bash_api.sh/wiki/%5BFRENCH-QUICK-START%5D-Quick-Start-en-Fran%C3%A7ais)</h6> |
 | <h5>- NOTE 20250323:</h5> |  <h5>$${\color{red}\text{  Adding events monitor over websocket support (fg/bg) }}$$</h5> |
@@ -70,12 +75,25 @@ Table of Contents:
 |frontend example| Example of usage of downloads function | [DOWNLOAD EXAMPLE](#DLEXTRA)|
 |frontend| Functions for managing downloads share links | [SHARE LINK FUNCTIONS](#SHARELINK) |
 |frontend network| Functions for managing DHCP reservations | [NETWORK DHCP FUNCTIONS](#DHCP) |
+|frontend network| Functions for managing DHCP global configuration | [DHCP CONFIGURATION FUNCTIONS](#DHCPCFG) |
+|frontend network| Functions for managing DHCP options (RFC 2132) | [DHCP OPTIONS FUNCTIONS](#DHCPOPT) |
+|frontend network| Functions for computing tricky DHCP option values | [DHCP OPTION COMPUTE FUNCTIONS](#DHCPCOMP) |
 |frontend network| Functions for managing incomming NAT redirections | [NETWORK NAT FUNCTIONS](#NAT) |
+|frontend network| Functions for managing the firewall DMZ | [FIREWALL DMZ FUNCTIONS](#FWDMZ) |
+|frontend network| Functions for managing firewall incoming ports | [FIREWALL INCOMING PORTS FUNCTIONS](#FWIN) |
+|frontend network| Functions for managing the LAN routing table | [LAN ROUTING TABLE FUNCTIONS](#ROUTE) |
+|frontend network share| Functions for managing the FTP server | [FTP FUNCTIONS](#FTP) |
+|frontend network share| Functions for managing Samba (SMB) sharing | [SAMBA (SMB) FUNCTIONS](#SMB) |
+|frontend network share| Functions for managing AFP (Apple) sharing | [AFP FUNCTIONS](#AFP) |
+|frontend network| Functions for browsing LAN hosts | [LAN BROWSER FUNCTIONS](#LANBROWSE) |
+|frontend network| Functions for managing IPv6 connection configuration | [IPv6 CONFIGURATION FUNCTIONS](#IPV6) |
+|frontend network| Functions for managing the DHCPv6 server | [DHCPv6 CONFIGURATION FUNCTIONS](#DHCPV6) |
 |API| Filesystem API considerations|[FILESYSTEM](#FS) |
 |frontend| Functions for managing filesystem tasks | [FILESYSTEM TASK FUNCTIONS](#FSTSK) |
 |frontend| Functions for managing filesystem operations | [FILESYSTEM OPERATION FUNCTIONS](#FSOP) |
 |frontend VM| Functions for managing VM | [VIRTUAL MACHINES FUNCTIONS](#VM) |
 |frontend| Functions for managing DOMAIN NAME | [DOMAIN NAME FUNCTIONS](#DOMAIN) |
+|frontend| Function for automating a full freebox configuration backup | [CONFIGURATION BACKUP FUNCTION](#BACKUP) |
 |core frontend| Functions for listing Freebox components from API | [API LISTING](#LISTING) |
 |frontend| Functions for formatting API reply of frontend functions | [API REPLY OUTPUT](#REPLY) |
 |core| Functions for making direct actions on box from API | [API ACTIONS](#ACTIONS) |
@@ -1265,6 +1283,121 @@ echo $?
 ```
 
 
+#### *  check_if_bool *string*
+This function will check if the provided argument is a boolean (`true` or `false`). Return code will be 0 if valid, 1 otherwise.
+##### Example:
+```bash
+check_if_bool true
+echo $?
+```
+```bash
+0
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_u8 / check_if_u16 / check_if_u32 *string*
+These functions will check if the provided argument is an unsigned integer within range (u8: 0-255, u16: 0-65535, u32: 0-4294967295). Return code will be 0 if valid, 1 otherwise.
+##### Example:
+```bash
+check_if_u8 512
+echo $?
+```
+```bash
+1
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_s32 *string*
+This function will check if the provided argument is a signed 32 bit integer (-2147483648 to 2147483647). Return code will be 0 if valid, 1 otherwise.
+##### Example:
+```bash
+check_if_s32 -1500
+echo $?
+```
+```bash
+0
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_ip_list *string*
+This function will check if the provided argument is a comma separated list of valid IP addresses (ex: `"192.168.1.38, 192.168.1.42"`). Return code will be 0 if every address is valid, 1 otherwise.
+##### Example:
+```bash
+check_if_ip_list "192.168.1.38, not_an_ip"
+echo $?
+```
+```bash
+1
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_hexstring *string*
+This function will check if the provided argument is a valid hexadecimal string (even number of hex digits). Return code will be 0 if valid, 1 otherwise.
+##### Example:
+```bash
+check_if_hexstring "0a1B2c"
+echo $?
+```
+```bash
+0
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  _dhcp_option_type *string*
+This function returns (via `echo`) the [RFC 2132](https://www.ietf.org/rfc/rfc2132.txt) value type expected for a given DHCP option `id` (`bool`, `u8`, `u16`, `u32`, `s32`, `ip`, `ip_list`, `hexstring`, `string`, or `unknown` if the `id` isn't recognized). Implemented as a `case` statement (not an associative array), so it stays compatible with bash versions that don't support `declare -A`.
+NOTE: you should not need to call this function directly - see `check_if_dhcp_option_value` and [DHCP OPTIONS](#DHCPOPT)
+##### Example:
+```bash
+_dhcp_option_type ntp_server
+_dhcp_option_type tcp_ttl
+_dhcp_option_type bogus_id
+```
+```bash
+ip_list
+u8
+unknown
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_if_dhcp_option_value *string* *string*
+This function validates a DHCP option `val` against the type expected for its `id` (see `_dhcp_option_type` above). Return code will be 0 if valid, 1 otherwise, and sets `${dhcpopt_type_err}` with a human readable message on failure.
+This function is called by `check_and_feed_dhcp_option_param`, see [DHCP OPTIONS](#DHCPOPT)
+##### Example:
+```bash
+check_if_dhcp_option_value tcp_ttl not_a_number
+echo "exit=$? dhcpopt_type_err=${dhcpopt_type_err}"
+```
+```bash
+exit=1 dhcpopt_type_err='tcp_ttl' expects a u8 value: 0-255
+```
+
+-------------------------------------------------------------------------------
+
+
+#### *  _json_escape *string*
+This function escapes a value for safe embedding as a JSON string (backslash, double-quote, newline, tab, carriage-return - in that order, since backslash must be escaped first or the following escapes would themselves get double-escaped). Used internally by every `check_and_feed_*_param` function below that embeds a free-text value (`description=`, `primary_name=`, ...) into a JSON body, so that a value containing `"` or `\` doesn't produce malformed JSON.
+NOTE: you should not need to call this function directly
+##### Example:
+```bash
+_json_escape 'a "quoted" value with \backslash'
+```
+```bash
+a \"quoted\" value with \\backslash
+```
+
+
 ___________________________________________________________________________________________
 | [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
@@ -1280,6 +1413,7 @@ ________________________________________________________________________________
 	- Each categories has a 'check_and_feed_XXX_param' for validating the arguement parameters and syntax
 	- Each categories has a 'param_XXX_err' function which manage errors and print help / examples when necessary
 	- Each function had a nice human readable output   
+- New (20260802): the new `list_*` functions added for [ROUTE](#ROUTE), [DHCPCFG](#DHCPCFG), [DHCPOPT](#DHCPOPT), [FTP](#FTP), [SMB](#SMB), [AFP](#AFP), [LANBROWSE](#LANBROWSE), [FWDMZ](#FWDMZ), [FWIN](#FWIN), [IPV6](#IPV6) and [DHCPV6](#DHCPV6) each also have a `_list` suffixed convenience wrapper that calls `auto_relogin` first automatically, ex: `dhcp_config_list` runs `auto_relogin && list_dhcp_config`
 
 
 ___________________________________________________________________________________________
@@ -2604,6 +2738,473 @@ ________________________________________________________________________________
 
 __________________________________________________________________________________________
 
+<a name="DHCPCFG"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: DHCP GLOBAL CONFIGURATION
+-----------------
+
+- This API lets you manage the DHCP server's global settings (`/dhcp/config/`): enable/disable the server, the address range it serves, sticky assignment, broadcast behaviour, and TFTP boot options
+- For per-lease reservations, see [NETWORK DHCP FUNCTIONS](#DHCP). For RFC 2132 DHCP options (NTP servers, domain search, ...), see [DHCP OPTIONS](#DHCPOPT)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_dhcp_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_dhcp_config. If not, function param_dhcp_config_err will be called. This function returns a 'json' object to be passed to "API CALL" functions - only the fields you supply are included (partial update).
+This function also checks the validity of `ip_range_start`/`ip_range_end` (must be valid ip addresses) and all boolean fields.
+##### Example:
+```bash
+check_and_feed_dhcp_config_param ip_range_start="192.168.1.10" ip_range_end="192.168.1.100"
+echo -e "${dhcp_config_object}"
+```
+```bash
+{"ip_range_start":"192.168.1.10","ip_range_end":"192.168.1.100"}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_dhcp_config_err
+This function will display help / manual and example on the command which calling it. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_dhcp_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_dhcp_config
+This function prints the current DHCP server global configuration: enabled state, IP range, gateway, netmask, DNS servers, and a count of configured DHCP options (see [DHCP OPTIONS](#DHCPOPT) for the detail).
+##### Example:
+```bash
+list_dhcp_config
+```
+```bash
+
+				DHCP SERVER GLOBAL CONFIGURATION:
+
+DHCP SERVER:		enabled
+STICKY ASSIGN:		true
+GATEWAY:		192.168.1.254         NETMASK:		255.255.255.0
+IP RANGE:		192.168.1.10 - 192.168.1.200
+ALWAYS BROADCAST:	false                 IGNORE OUT OF RANGE:	false
+BOOT SERVER:		                      BOOT FILE:		
+DNS SERVERS:		192.168.1.254
+DHCP OPTIONS SET:	2		(run list_dhcp_options for details)
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_dhcp_config *array_of_strings*
+This function updates the DHCP server global configuration. This is a **partial update**: only send the parameter(s) you want to change, the rest of the configuration is left untouched.
+##### Example:
+```bash
+upd_dhcp_config
+```
+```bash
+
+ERROR: <param> for "upd_dhcp_config" must be some of:
+enabled=			# boolean 'true' or 'false': enable/disable the DHCP server
+sticky_assign=			# boolean 'true' or 'false': always assign same ip to a given host
+ip_range_start=			# DHCP range start ip
+ip_range_end=			# DHCP range end ip
+always_broadcast=		# boolean 'true' or 'false'
+ignore_out_of_range_hint=	# boolean 'true' or 'false'
+boot_server=			# TFTP server address used when booting via TFTP
+boot_file=			# boot file to download from the TFTP server
+
+NOTE: this updates the freebox DHCP server global configuration, only send the parameter(s) you want to change (partial update)
+
+NOTE: please run "list_dhcp_config" to see the current configuration
+
+EXAMPLE:
+upd_dhcp_config ip_range_start="192.168.1.10" ip_range_end="192.168.1.100"
+
+EXAMPLE (disable DHCP server):
+upd_dhcp_config enabled="false"
+
+
+operation failed ! 
+enabled must be a boolean: true or false
+```
+##### Example:
+```bash
+upd_dhcp_config ip_range_start="192.168.1.20" ip_range_end="192.168.1.220"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"ip_range_start":"192.168.1.20","ip_range_end":"192.168.1.220"}
+```
+##### Example:
+```bash
+list_dhcp_config
+```
+```bash
+
+				DHCP SERVER GLOBAL CONFIGURATION:
+
+DHCP SERVER:		enabled
+STICKY ASSIGN:		true
+GATEWAY:		192.168.1.254         NETMASK:		255.255.255.0
+IP RANGE:		192.168.1.10 - 192.168.1.200
+ALWAYS BROADCAST:	false                 IGNORE OUT OF RANGE:	false
+BOOT SERVER:		                      BOOT FILE:		
+DNS SERVERS:		192.168.1.254
+DHCP OPTIONS SET:	2		(run list_dhcp_options for details)
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="DHCPOPT"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: DHCP OPTIONS (RFC 2132)
+-----------------
+
+- This API lets you manage DHCP options as defined in [RFC 2132](https://www.ietf.org/rfc/rfc2132.txt) (NTP servers, log servers, TCP TTL, domain search, classless static routes, vendor-specific info, ...)
+- New (20260805): `domain_name` (RFC 2132 option 15, string type) - the network-wide default DNS domain suffix served via DHCP. Not to be confused with a LAN host's own local `domain_name` (see [LAN BROWSER FUNCTIONS](#LANBROWSE) `upd_lan_host`), which is a different, per-host setting that happens to share the same name
+- The options themselves live inside the DHCP global configuration object (`/dhcp/config/` `options[]`). Since that endpoint supports **partial updates**, add/upd/del here only ever send back `{"options":[...]}` - the rest of the DHCP configuration is left untouched
+- See [COMPUTING TRICKY DHCP OPTION VALUES](#DHCPCOMP) for two option types (`domain_search` and `classless_static_route`) whose value is a binary format, not something you'd type by hand
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_dhcp_option_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for the function which is calling it, depending on the "action" set by the calling function ("add", "upd", "del"). If not, function param_dhcp_option_err will be called. This function returns a 'json' object to be passed to "API CALL" functions.
+This function also validates `val` against the [RFC 2132](https://www.ietf.org/rfc/rfc2132.txt) type expected for `id` (see `check_if_dhcp_option_value` in [CHECK FUNCTIONS](#CHECK)), and rejects an unknown `id`.
+##### Example:
+```bash
+action=add
+check_and_feed_dhcp_option_param id="ntp_server" val="192.168.1.38, 192.168.1.42"
+echo -e "${dhcp_option_object}"
+```
+```bash
+{"id":"ntp_server","val":"192.168.1.38, 192.168.1.42"}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_dhcp_option_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("add", "upd", "del"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_dhcp_option_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_dhcp_options
+This function lists all DHCP options ([RFC 2132](https://www.ietf.org/rfc/rfc2132.txt)) currently configured on the DHCP server.
+##### Example:
+```bash
+list_dhcp_options
+```
+```bash
+
+				DHCP OPTIONS (RFC 2132):
+
+#:    id:                         value:
+0:    ntp_server                  192.168.1.38, 192.168.1.42
+1:	tcp_ttl		64
+```
+
+-------------------------------------------------------------------------------
+
+#### *  add_dhcp_option *array_of_strings*
+This function adds a new DHCP option: `id=` (the RFC 2132 option identifier, ex: `ntp_server`) and `val=` (its value) are both mandatory. The value is validated **locally, before ever calling the API** against the type expected for that `id` (bool/u8/u16/u32/s32/ip/ip\_list/hexstring/string - see the extended [CHECK FUNCTIONS](#CHECK)). Fails if `id` already exists (use `upd_dhcp_option` instead) or if `id` isn't a recognized RFC 2132 identifier.
+##### Example:
+```bash
+add_dhcp_option
+```
+```bash
+
+ERROR: <param> for "add_dhcp_option" must be :
+id=			# DHCP option identifier as defined in RFC 2132, ex: ntp_server, log_server, tcp_ttl, ...
+val=			# value for this option - type depends on 'id' (bool, u8, u16, u32, s32, ip, ip_list, hexstring or string)
+
+NOTE: see the 'DHCP Option Object' section of the freebox API documentation for the full list of valid 'id' identifiers and their expected type
+
+NOTE: please run "list_dhcp_options" to see currently configured options
+
+EXAMPLE (ip_list):
+add_dhcp_option id="ntp_server" val="192.168.1.38, 192.168.1.42"
+
+EXAMPLE (bool):
+add_dhcp_option id="ip_fwd" val="true"
+
+EXAMPLE (u8):
+add_dhcp_option id="tcp_ttl" val="64"
+
+
+operation failed ! 
+```
+##### Example:
+```bash
+add_dhcp_option id="tcp_ttl" val="not_a_number"
+```
+```bash
+
+ERROR: <param> for "add_dhcp_option" must be :
+id=			# DHCP option identifier as defined in RFC 2132, ex: ntp_server, log_server, tcp_ttl, ...
+val=			# value for this option - type depends on 'id' (bool, u8, u16, u32, s32, ip, ip_list, hexstring or string)
+
+NOTE: see the 'DHCP Option Object' section of the freebox API documentation for the full list of valid 'id' identifiers and their expected type
+
+ERROR: 'tcp_ttl' expects a u8 value: 0-255
+
+NOTE: please run "list_dhcp_options" to see currently configured options
+
+EXAMPLE (ip_list):
+add_dhcp_option id="ntp_server" val="192.168.1.38, 192.168.1.42"
+
+EXAMPLE (bool):
+add_dhcp_option id="ip_fwd" val="true"
+
+EXAMPLE (u8):
+add_dhcp_option id="tcp_ttl" val="64"
+
+
+operation failed ! 
+```
+##### Example:
+```bash
+add_dhcp_option id="totally_bogus" val="whatever"
+```
+```bash
+
+ERROR: <param> for "add_dhcp_option" must be :
+id=			# DHCP option identifier as defined in RFC 2132, ex: ntp_server, log_server, tcp_ttl, ...
+val=			# value for this option - type depends on 'id' (bool, u8, u16, u32, s32, ip, ip_list, hexstring or string)
+
+NOTE: see the 'DHCP Option Object' section of the freebox API documentation for the full list of valid 'id' identifiers and their expected type
+
+ERROR: 'totally_bogus' is not a known DHCP option identifier (see RFC 2132 / freebox API doc)
+
+NOTE: please run "list_dhcp_options" to see currently configured options
+
+EXAMPLE (ip_list):
+add_dhcp_option id="ntp_server" val="192.168.1.38, 192.168.1.42"
+
+EXAMPLE (bool):
+add_dhcp_option id="ip_fwd" val="true"
+
+EXAMPLE (u8):
+add_dhcp_option id="tcp_ttl" val="64"
+
+
+operation failed ! 
+```
+##### Example:
+```bash
+add_dhcp_option id="log_server" val="192.168.1.100"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"options":[{"id":"ntp_server","val":"192.168.1.38, 192.168.1.42"},{"id":"tcp_ttl","val":"64"},{"id":"log_server","val":"192.168.1.100"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_dhcp_option *array_of_strings*
+This function updates the value of an existing DHCP option, matched by `id=`.
+##### Example:
+```bash
+upd_dhcp_option id="ntp_server" val="192.168.1.38"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"options":[{"id":"ntp_server","val":"192.168.1.38"},{"id":"tcp_ttl","val":"64"},{"id":"log_server","val":"192.168.1.100"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  del_dhcp_option *string*
+This function removes an existing DHCP option, identified by its `id`.
+##### Example:
+```bash
+del_dhcp_option log_server
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"options":[{"id":"ntp_server","val":"192.168.1.38"},{"id":"tcp_ttl","val":"64"}]}
+```
+##### Example:
+```bash
+list_dhcp_options
+```
+```bash
+
+				DHCP OPTIONS (RFC 2132):
+
+#:    id:                         value:
+0:    ntp_server                  192.168.1.38
+1:    tcp_ttl                     64
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="DHCPCOMP"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: COMPUTING TRICKY DHCP OPTION VALUES
+-----------------
+
+- Some [DHCP OPTIONS](#DHCPOPT) are `hexstring` type binary formats that are painful to compute by hand: `domain_search` (DNS-style compressed labels) and `classless_static_route` (a packed route list)
+- These functions take plain, human-readable input and print the exact hex string to pass as `add_dhcp_option`/`upd_dhcp_option`'s `val=` - feed the result straight in with command substitution, as shown below
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_dhcp119_param *array_of_strings*
+This function validates each positional domain name parameter (reusing `check_if_domain`, see [CHECK FUNCTIONS](#CHECK)). If any domain is invalid, function param_dhcp119_err will be called. This function fills the `dhcp119_domains[]` array with the validated domains.
+##### Example:
+```bash
+check_and_feed_dhcp119_param 14rv.lan storage.lan
+echo -e "${dhcp119_domains[@]}"
+```
+```bash
+14rv.lan storage.lan
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_dhcp119_err
+This function will display help / manual and example on compute_dhcp119_string. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_dhcp119_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  compute_dhcp119_string *array_of_strings*
+This function computes the [RFC 3397](https://www.ietf.org/rfc/rfc3397.txt) `domain_search` (DHCP option 119) hex value from one or more plain domain names, applying the same DNS-style suffix compression a real DHCP server would (a 2-byte pointer back to the first earlier occurrence of a matching trailing suffix). Verified to reproduce byte-for-byte the exact hex a real DHCP server produces for the same domain list. Pure bash, no external tool.
+##### Example:
+```bash
+compute_dhcp119_string
+```
+```bash
+
+ERROR: "compute_dhcp119_string" takes one or more domain names as positional parameters:
+domain1 [domain2] [domain3] ...
+
+NOTE: this computes the RFC 3397 (DNS style, suffix-compressed) hex string expected as 'val=' for the 'domain_search' DHCP option (opt 119)
+
+NOTE: feed the result straight into add_dhcp_option, ex:
+add_dhcp_option id="domain_search" val="$(compute_dhcp119_string 14rv.lan storage.lan)"
+
+EXAMPLE:
+compute_dhcp119_string 14rv.lan storage.lan oob.lan lab.lan fbx.lan
+```
+##### Example:
+```bash
+compute_dhcp119_string 14rv.lan storage.lan oob.lan lab.lan fbx.lan
+```
+```bash
+0431347276036c616e000773746f72616765c005036f6f62c005036c6162c00503666278c005
+```
+##### Example:
+```bash
+add_dhcp_option id="domain_search" val="$(compute_dhcp119_string 14rv.lan storage.lan)"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"options":[{"id":"ntp_server","val":"192.168.1.38"},{"id":"tcp_ttl","val":"64"},{"id":"domain_search","val":"0431347276036c616e000773746f72616765c005"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  check_and_feed_dhcp121_param *array_of_strings*
+This function validates each positional `prefix/masklen=gateway` parameter: network and gateway via `check_if_ip`, masklen 0-32, and rejects a prefix with host bits set (see compute_dhcp121_string below). If invalid, function param_dhcp121_err will be called. This function fills the `dhcp121_prefix[]` / `dhcp121_mask[]` / `dhcp121_gw[]` arrays.
+##### Example:
+```bash
+check_and_feed_dhcp121_param 10.0.0.0/8=10.0.0.1
+echo -e "${dhcp121_prefix[@]} mask=${dhcp121_mask[@]} gw=${dhcp121_gw[@]}"
+```
+```bash
+prefix=10.0.0.0 mask=8 gw=10.0.0.1
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_dhcp121_err
+This function will display help / manual and example on compute_dhcp121_string. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_dhcp121_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  compute_dhcp121_string *array_of_strings*
+This function computes the [RFC 3442](https://www.ietf.org/rfc/rfc3442.txt) `classless_static_route` (DHCP option 121) hex value from one or more `prefix/masklen=gateway` routes (mask-width byte + only the "significant" prefix octets + the 4 gateway octets, concatenated). Verified against the worked example published in RFC 3442 itself.
+**This function validates `prefix` for you:** if it has host bits set (ex: `10.17.5.0/16`), it is REJECTED with the correct network address suggested, instead of silently miscomputing.
+##### Example:
+```bash
+compute_dhcp121_string 10.17.5.0/16=10.17.0.1
+```
+```bash
+
+ERROR: "compute_dhcp121_string" takes one or more routes as positional parameters:
+prefix/masklen=gateway [prefix/masklen=gateway] ...
+
+NOTE: this computes the RFC 3442 packed binary hex string expected as 'val=' for the 'classless_static_route' DHCP option (opt 121)
+
+NOTE: 'prefix' must be a properly masked network address (ex: 10.17.0.0/16, NOT 10.17.5.0/16) - a prefix with host bits set is REJECTED, with the correct network address suggested
+
+ERROR: '10.17.5.0/16' has host bits set - did you mean '10.17.0.0/16' ?
+
+EXAMPLE:
+compute_dhcp121_string 10.0.0.0/8=10.0.0.1 10.17.0.0/16=10.17.0.1 0.0.0.0/0=10.17.0.1
+
+NOTE: feed the result straight into add_dhcp_option, ex:
+add_dhcp_option id="classless_static_route" val="$(compute_dhcp121_string 10.0.0.0/8=10.0.0.1)"
+```
+##### Example:
+```bash
+compute_dhcp121_string 10.0.0.0/8=10.0.0.1 10.17.0.0/16=10.17.0.1 0.0.0.0/0=10.17.0.1
+```
+```bash
+080a0a000001100a110a110001000a110001
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
 <a name="NAT"></a>
 
 API FRONTEND FUNCTIONS - NETWORK: NAT REDIRECTIONS
@@ -3013,6 +3614,1178 @@ ________________________________________________________________________________
 |:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
+
+<a name="FWDMZ"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: FIREWALL DMZ
+-----------------
+
+- This API lets you manage the freebox's DMZ host (`/fw/dmz/`)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+##### WARNING
+A DMZ host is FULLY exposed to the internet - every unmatched incoming port is forwarded to it, bypassing all other firewall rules. Prefer [NETWORK NAT FUNCTIONS](#NAT) (`add_fw_redir`) for specific ports whenever possible.
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_fw_dmz_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_fw_dmz. If not, function param_fw_dmz_err will be called. This function returns a 'json' object (partial update).
+This function also checks `ip` is a valid ip address and `enabled` is a boolean.
+##### Example:
+```bash
+check_and_feed_fw_dmz_param ip="192.168.1.38" enabled="true"
+echo -e "${fw_dmz_object}"
+```
+```bash
+{"ip":"192.168.1.38","enabled":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_fw_dmz_err
+This function will display help / manual and example on upd_fw_dmz. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_fw_dmz_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_fw_dmz
+This function prints the current DMZ configuration.
+##### Example:
+```bash
+list_fw_dmz
+```
+```bash
+
+				FIREWALL DMZ CONFIGURATION:
+
+DMZ:		disabled	TARGET IP (kept when disabled):	
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_fw_dmz *array_of_strings*
+This function updates the DMZ configuration (partial update): `ip=` and/or `enabled=`.
+##### Example:
+```bash
+upd_fw_dmz ip="192.168.1.38" enabled="true"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"ip":"192.168.1.38","enabled":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  ena_fw_dmz / dis_fw_dmz
+These functions quickly enable/disable the DMZ (`ena_fw_dmz` keeps the currently configured `ip`).
+##### Example:
+```bash
+dis_fw_dmz
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"enabled":false}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="FWIN"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: FIREWALL INCOMING PORTS
+-----------------
+
+- This API lets you control remote-access port bindings for freebox services (`/fw/incoming/`)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_fw_incoming_param *string* *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_fw_incoming. If not, function param_fw_incoming_err will be called. This function returns a 'json' object (partial update) and also sets non-local `incoming_port_id`.
+This function also checks `in_port` is a valid port and `enabled` is a boolean.
+##### Example:
+```bash
+check_and_feed_fw_incoming_param https in_port="443"
+echo -e "${fw_incoming_object}"
+```
+```bash
+{"in_port":443}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_fw_incoming_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("upd", "ena", "dis"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_fw_incoming_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_fw_incoming
+This function lists all incoming port bindings (remote access to freebox services: admin UI, FTP, VPN, bittorrent, ...).
+##### Example:
+```bash
+list_fw_incoming
+```
+```bash
+
+				FIREWALL INCOMING PORTS (remote access to freebox services):
+
+#:    id:                   protocol:   port:     allowed:    active:
+0:    http                  tcp         80        allowed     false
+1:	https		tcp		443	allowed  	true
+2:	ftp		tcp		21	blocked  	false
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_fw_incoming *string* *array_of_strings*
+This function updates an incoming port binding: `port_id` (from `list_fw_incoming`), then `in_port=` and/or `enabled=`.
+##### Example:
+```bash
+upd_fw_incoming https in_port="4443"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"in_port":4443}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  ena_fw_incoming / dis_fw_incoming *string*
+These functions quickly allow/block an incoming port binding, identified by its `port_id`.
+##### Example:
+```bash
+ena_fw_incoming ftp
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"enabled":true}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="ROUTE"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: LAN ROUTING TABLE
+-----------------
+
+- This API lets you manage static routes in the freebox's LAN routing table (`/lan/routes/`)
+- Functions developped to manage this API let you list, add, update, enable, disable and delete static routes
+- The freebox API replaces the WHOLE routing table on every write (there is no per-route endpoint) - add/upd/del/ena/dis all fetch the table, patch it, and write it back automatically, using the library's pure bash JSON parser (`get_json_value_for_key`) - **jq is never required, even for this destructive rewrite**
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_lan_route_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for the function which is calling it, depending on the "action" set by the calling function ("add", "upd"). If not, function param_lan_route_err will be called to set error and display help. This function returns a 'json' object to be passed to "API CALL" functions.
+This function also checks the validity of `prefix` (CIDR format), `gateway` (must be a valid ip address) and `enabled` (must be a boolean).
+##### Example:
+```bash
+action=add
+check_and_feed_lan_route_param prefix="192.168.42.0/24" gateway="192.168.1.38" description="My first route"
+echo -e "${lan_route_object}"
+```
+```bash
+{"prefix":"192.168.42.0/24","gateway":"192.168.1.38","enabled":true,"description":"My first route"}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_lan_route_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("add", "upd", "del", "ena", "dis"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_lan_route_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_lan_routes
+This function lists all static routes currently in the LAN routing table. Routes are colored green (active) or purple (disabled).
+##### Example:
+```bash
+list_lan_routes
+```
+```bash
+
+				LAN STATIC ROUTES (ROUTING TABLE):
+
+#:    prefix:                   gateway:            state:      description:
+0:    192.168.42.0/24           192.168.1.38        active      VM lab network
+1:	192.168.24.240/28	192.168.1.38	disabled  	guest wifi (disabled)
+```
+
+-------------------------------------------------------------------------------
+
+#### *  add_lan_route *array_of_strings*
+This function adds a new static route to the routing table. `prefix=` and `gateway=` are mandatory, `enabled=` (default `true`) and `description=` are optional.
+NOTE: the freebox API replaces the WHOLE routing table on every write - this function fetches the current table, appends the new route, then writes the table back. This works without any external tool (pure bash).
+##### Example:
+```bash
+add_lan_route
+```
+```bash
+
+ERROR: <param> for "add_lan_route" must be some of:
+prefix=		# destination network in CIDR format, ex: 192.168.42.0/24
+gateway=		# gateway ip address for this route
+enabled=		# boolean 'true' or 'false': default 'true'
+description=		# string: free text description 
+
+NOTE: minimum parameters to specify on cmdline to create a static route: 
+prefix= 
+gateway=
+
+WARNING: the following networks are always rejected by the freebox as invalid routes:
+127.0.0.0/8		# loopback network
+169.254.0.0/16		# link-local addresses
+224.0.0.0/4		# IANA multicast
+192.168.27.0/24	# used for VPN and guest WIFI addresses
+
+NOTE: only one ENABLED route may exist for a given prefix - adding a second enabled route with a prefix that already has an active route returns an 'exists' error (add it with enabled="false" instead, or disable/delete the existing one first)
+
+EXAMPLE:
+add_lan_route prefix="192.168.42.0/24" gateway="192.168.1.38" description="My first route"
+
+
+operation failed ! 
+```
+##### Example:
+```bash
+add_lan_route prefix="192.168.50.0/24" gateway="192.168.1.1" description="storage VLAN"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+[{"prefix":"192.168.42.0/24","gateway":"192.168.1.38","enabled":true,"description":"VM lab network"},{"prefix":"192.168.24.240/28","gateway":"192.168.1.38","enabled":false,"description":"guest wifi (disabled)"},{"prefix":"192.168.50.0/24","gateway":"192.168.1.1","enabled":true,"description":"storage VLAN"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_lan_route *array_of_strings*
+This function updates an existing route, matched by `prefix=`. Only the fields you supply are changed.
+##### Example:
+```bash
+upd_lan_route prefix="192.168.42.0/24" gateway="192.168.1.99"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+[{"prefix":"192.168.42.0/24","gateway":"192.168.1.99","enabled":true,"description":"VM lab network"},{"prefix":"192.168.24.240/28","gateway":"192.168.1.38","enabled":false,"description":"guest wifi (disabled)"},{"prefix":"192.168.50.0/24","gateway":"192.168.1.1","enabled":true,"description":"storage VLAN"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  ena_lan_route / dis_lan_route *string*
+These functions enable/disable an existing route, identified by its `prefix`.
+##### Example:
+```bash
+dis_lan_route "192.168.24.240/28"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+[{"prefix":"192.168.42.0/24","gateway":"192.168.1.99","enabled":true,"description":"VM lab network"},{"prefix":"192.168.24.240/28","gateway":"192.168.1.38","enabled":false,"description":"guest wifi (disabled)"},{"prefix":"192.168.50.0/24","gateway":"192.168.1.1","enabled":true,"description":"storage VLAN"}]}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  del_lan_route *string*
+This function deletes an existing route, identified by its `prefix`.
+##### Example:
+```bash
+del_lan_route "192.168.50.0/24"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+[{"prefix":"192.168.42.0/24","gateway":"192.168.1.99","enabled":true,"description":"VM lab network"},{"prefix":"192.168.24.240/28","gateway":"192.168.1.38","enabled":false,"description":"guest wifi (disabled)"}]}
+```
+##### Example:
+```bash
+list_lan_routes
+```
+```bash
+
+				LAN STATIC ROUTES (ROUTING TABLE):
+
+#:    prefix:                   gateway:            state:      description:
+0:    192.168.42.0/24           192.168.1.99        active      VM lab network
+1:	192.168.24.240/28	192.168.1.38	disabled  	guest wifi (disabled)
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="FTP"></a>
+
+API FRONTEND FUNCTIONS - NETWORK SHARE: FTP SERVER
+-----------------
+
+- This API lets you manage the freebox's built-in FTP server configuration (`/ftp/config/`): enable/disable, anonymous access, remote (internet) access, control/data ports, and remote domain
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_ftp_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_ftp_config. If not, function param_ftp_config_err will be called. This function returns a 'json' object (partial update).
+This function also checks `port_ctrl`/`port_data` are valid ports and all boolean fields.
+##### Example:
+```bash
+check_and_feed_ftp_config_param enabled="true" allow_anonymous="false"
+echo -e "${ftp_config_object}"
+```
+```bash
+{"enabled":true,"allow_anonymous":false}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_ftp_config_err
+This function will display help / manual and example on upd_ftp_config. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_ftp_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_ftp_config
+This function prints the current FTP server configuration.
+##### Example:
+```bash
+list_ftp_config
+```
+```bash
+
+				FTP SERVER CONFIGURATION:
+
+FTP SERVER:		disabled
+USERNAME:		freebox (read-only)
+ANONYMOUS LOGIN:	false			ANONYMOUS WRITE:	false
+REMOTE ACCESS:		false			WEAK PASSWORD:		true
+NOTE: password is currently weak - remote access stays disabled until you set a stronger password
+CONTROL PORT:		3615			DATA PORT:	1337
+REMOTE DOMAIN:		
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_ftp_config *array_of_strings*
+This function updates the FTP server configuration (partial update - only send what you want to change). The FTP username cannot be changed (it is your freebox account name). `allow_remote_access` requires a strong enough password, or it silently stays disabled.
+##### Example:
+```bash
+upd_ftp_config port_ctrl="99999"
+```
+```bash
+
+ERROR: <param> for "upd_ftp_config" must be some of:
+enabled=			# boolean 'true' or 'false': enable/disable the FTP server
+allow_anonymous=		# boolean: allow anonymous login
+allow_anonymous_write=		# boolean: allow anonymous users to write
+allow_remote_access=		# boolean: allow FTP access from internet (requires a strong password)
+password=			# string: change the FTP account password
+port_ctrl=			# int [1-65535]: control port for remote access
+port_data=			# int [1-65535]: data port for remote access
+remote_domain=			# string: domain name to use for remote access
+
+NOTE: this updates the FTP server configuration, only send the parameter(s) you want to change (partial update)
+
+NOTE: the FTP username cannot be changed (it is your freebox account name) - please run "list_ftp_config" to see the current configuration
+
+NOTE: allow_remote_access requires a strong enough password: it will silently stay disabled otherwise
+
+EXAMPLE:
+upd_ftp_config enabled="true" allow_anonymous="false"
+
+EXAMPLE (remote access):
+upd_ftp_config allow_remote_access="true" password="S0m3StrongP@ssw0rd!" remote_domain="myfbx.freeboxos.fr"
+
+
+operation failed ! 
+port_ctrl must be a number in [1-65535]
+```
+##### Example:
+```bash
+upd_ftp_config enabled="true" allow_anonymous="false"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"enabled":true,"allow_anonymous":false}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="SMB"></a>
+
+API FRONTEND FUNCTIONS - NETWORK SHARE: SAMBA (SMB)
+-----------------
+
+- This API lets you manage the freebox's Samba (Windows-compatible) file/printer sharing configuration (`/netshare/samba/`)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_smb_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_smb_config. If not, function param_smb_config_err will be called. This function returns a 'json' object (partial update).
+##### Example:
+```bash
+check_and_feed_smb_config_param workgroup="14RV-LAN" smbv2_enabled="true"
+echo -e "${smb_config_object}"
+```
+```bash
+{"workgroup":"14RV-LAN","smbv2_enabled":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_smb_config_err
+This function will display help / manual and example on upd_smb_config. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_smb_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_smb_config
+This function prints the current Samba (Windows file/printer sharing) configuration.
+##### Example:
+```bash
+list_smb_config
+```
+```bash
+
+				SAMBA (SMB) CONFIGURATION:
+
+FILE SHARING:		true		PRINTER SHARING:	true
+LOGIN REQUIRED:		false		LOGIN USER:		freebox
+WORKGROUP:		WORKGROUP		SMBv2/v3:		true
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_smb_config *array_of_strings*
+This function updates the Samba configuration (partial update). `smbv2_enabled=true` is recommended - SMBv1 is legacy/insecure.
+##### Example:
+```bash
+upd_smb_config workgroup="14RV-LAN" logon_enabled="true" logon_user="nba" logon_password="S0m3P@ss"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"workgroup":"14RV-LAN","logon_enabled":true,"logon_user":"nba","logon_password":"S0m3P@ss"}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="AFP"></a>
+
+API FRONTEND FUNCTIONS - NETWORK SHARE: AFP (APPLE FILE SHARING)
+-----------------
+
+- This API lets you manage the freebox's AFP (Apple Filing Protocol) file sharing configuration (`/netshare/afp/`), including which macOS device icon the freebox shows up as on the network
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_afp_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_afp_config. If not, function param_afp_config_err will be called. This function returns a 'json' object (partial update).
+This function also validates `server_type` against the known macOS icon enum and boolean fields.
+##### Example:
+```bash
+check_and_feed_afp_config_param enabled="true" server_type="macmini"
+echo -e "${afp_config_object}"
+```
+```bash
+{"enabled":true,"server_type":"macmini"}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_afp_config_err
+This function will display help / manual and example on upd_afp_config. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_afp_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_afp_config
+This function prints the current AFP (Apple Filing Protocol) configuration.
+##### Example:
+```bash
+list_afp_config
+```
+```bash
+
+				AFP (APPLE FILE SHARING) CONFIGURATION:
+
+AFP SERVICE:			disabled
+GUEST ACCESS:			true		LOGIN NAME:	freebox
+SERVER TYPE (macOS icon):	airport
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_afp_config *array_of_strings*
+This function updates the AFP configuration (partial update). `server_type` is validated against the known macOS icon enum.
+##### Example:
+```bash
+upd_afp_config server_type="not_a_mac"
+```
+```bash
+
+ERROR: <param> for "upd_afp_config" must be some of:
+enabled=		# boolean 'true'/'false': enable/disable the AFP service
+guest_allow=		# boolean: allow guest (no login) access to shared files
+login_name=		# string: AFP user name
+login_password=		# string: AFP user password
+server_type=		# enum: icon shown in macOS, one of:
+			# powerbook powermac macmini imac macbook macbookpro macbookair macpro appletv airport xserve
+
+NOTE: this updates the AFP configuration, only send the parameter(s) you want to change (partial update)
+
+NOTE: please run "list_afp_config" to see the current configuration
+
+EXAMPLE:
+upd_afp_config enabled="true" guest_allow="false"
+
+EXAMPLE (change icon):
+upd_afp_config server_type="macmini"
+
+
+operation failed ! 
+'not_a_mac' is not a valid server_type
+```
+##### Example:
+```bash
+upd_afp_config enabled="true" server_type="macmini"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"enabled":true,"server_type":"macmini"}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="LANBROWSE"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: LAN BROWSER (discovered hosts)
+-----------------
+
+- This API lets you browse hosts discovered on your LAN (`/lan/browser/`), see their online/offline status, and rename them or change their persistence
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_lan_host_param *string* *string* *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_lan_host, depending on the "action" set by the calling function ("upd", "del"). If not, function param_lan_host_err will be called. This function returns a 'json' object (partial update) and also sets non-local `lan_iface`/`lan_hostid`.
+This function also validates `persistent` is a boolean.
+##### Example:
+```bash
+action=upd
+check_and_feed_lan_host_param pub ether-00:24:d4:7e:00:4c primary_name="Freebox Tv"
+echo -e "${lan_host_object}"
+```
+```bash
+{"primary_name":"Freebox Tv"}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_lan_host_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("upd", "del"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_lan_host_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_lan_interfaces
+This function lists the LAN interfaces browsable by the freebox (most freeboxes only expose a single one: `pub`).
+##### Example:
+```bash
+list_lan_interfaces
+```
+```bash
+
+				LAN BROWSABLE INTERFACES:
+
+#:    name:             host count:
+0:    pub               12
+```
+
+-------------------------------------------------------------------------------
+
+#### *  list_lan_hosts *string (optional, default: "pub")*
+This function lists all hosts discovered on a LAN interface, colored **green = online** / **purple = offline** (`reachable`).
+##### Example:
+```bash
+list_lan_hosts pub
+```
+```bash
+
+				LAN HOSTS (interface: pub):
+
+#:    id:                                           mac:                                        ip:                                         state:      vendor:                         name:
+0:    ether-d0:23:db:36:15:aa                       d0:23:db:36:15:aa                           192.168.69.20                               online      Apple, Inc.                     iPhone r0ro
+1:    ether-00:24:d4:7e:00:4c                       00:24:d4:7e:00:4c                           192.168.69.30                               offline     FREEBOX SA                      Freebox Player Salon
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_lan_host *string* *string* *array_of_strings*
+This function updates a LAN host's editable properties: `interface`, `hostid` (both from `list_lan_hosts`), then `primary_name=` (rename), `domain_name=` (per-host local domain name, must end with `.home` - see `check_if_lan_domain_name` in [CHECK FUNCTIONS](#CHECK)) and/or `persistent=` (keep remembered when unreachable).
+##### Example:
+```bash
+upd_lan_host pub ether-00:24:d4:7e:00:4c primary_name="Freebox Player TV Salon"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"primary_name":"Freebox Player TV Salon"}
+```
+##### Example (set local domain name):
+```bash
+upd_lan_host pub ether-00:24:d4:7e:00:4c domain_name="my-nas.home"
+```
+```bash
+
+operation completed: 
+{"success":true}
+```
+##### Example (invalid domain name):
+```bash
+upd_lan_host pub ether-00:24:d4:7e:00:4c domain_name="not_valid"
+```
+```bash
+
+ERROR: "upd_lan_host" takes 'interface' 'hostid' then <param>:
+interface		# lan interface, ex: pub (run list_lan_interfaces to see available interfaces)
+hostid			# host id, ex: ether-00:24:d4:7e:00:4c (run "list_lan_hosts <interface>" to see all hosts)
+primary_name=		# optional: rename this host
+domain_name=		# optional: local domain name, must end with '.home' (ex: "my-nas.home"), empty string to remove it
+persistent=		# optional: boolean 'true'/'false' - keep this host remembered even when unreachable
+
+ERROR: domain_name must end with '.home', 63 characters max, letters/digits/hyphens only (a label cannot start with a digit or hyphen) - or an empty string to remove the local domain
+
+NOTE: please run "list_lan_hosts <interface>" to get the list of all hosts and their 'id'
+
+EXAMPLE:
+upd_lan_host pub ether-00:24:d4:7e:00:4c primary_name="Freebox Tv"
+
+EXAMPLE (set local domain):
+upd_lan_host pub ether-00:24:d4:7e:00:4c domain_name="freebox-tv.home"
+
+
+operation failed ! 
+```
+
+-------------------------------------------------------------------------------
+
+#### *  del_lan_host *string* *string*
+This function deletes a LAN host entry, identified by its `interface` and MAC address - you only need to provide the plain MAC (ex: `aa:e7:cf:5b:38:72`), the library builds the actual host id (`ether-<mac>`) for you.
+##### WARNING
+This uses an **UNDOCUMENTED** freebox API endpoint (`DELETE /lan/browser/<interface>/ether-<mac>/`) - it is not part of the official freebox API documentation. It was captured directly from the FreeboxOS web interface's own network traffic (its "forget this device" button uses exactly this call), the same way [DOMAIN NAME FUNCTIONS](#DOMAIN) and [CONFIGURATION BACKUP](#BACKUP) were - undocumented APIs can change or disappear without notice, $${\color{red}\text{USE AT YOUR OWN RISK }}$$
+##### Example:
+```bash
+del_lan_host
+```
+```bash
+
+ERROR: "del_lan_host" takes 'interface' then 'mac':
+interface		# lan interface, ex: pub (run list_lan_interfaces to see available interfaces)
+mac			# mac address of the host to delete, ex: aa:e7:cf:5b:38:72 (the library builds the actual host id "ether-<mac>" for you)
+
+WARNING: this uses an UNDOCUMENTED freebox API endpoint (DELETE /lan/browser/<interface>/ether-<mac>/) - it is NOT part of the official freebox API documentation, it was captured from the FreeboxOS web interface itself. Undocumented APIs can change or disappear without notice - USE AT YOUR OWN RISK
+
+NOTE: please run "list_lan_hosts <interface>" to get the list of all hosts and their mac address
+
+EXAMPLE:
+del_lan_host pub aa:e7:cf:5b:38:72
+```
+##### Example:
+```bash
+del_lan_host pub aa:e7:cf:5b:38:72
+```
+```bash
+
+operation completed: 
+{"success":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  check_and_feed_lan_host_show_param *array_of_strings*
+This function validates parameters for lan_host_show / lan_host_detail: an optional positional `interface` (default `pub`) then mandatory `mac=` - or, for lan_host_detail only, the literal keyword `all` instead of `mac=`. If not, function param_lan_host_show_err will be called. This function sets non-local `lan_host_show_iface` / `lan_host_show_mac` / `lan_host_show_all`.
+This function also checks `mac` is a valid mac address (via `check_if_mac`, see [CHECK FUNCTIONS](#CHECK))
+
+-------------------------------------------------------------------------------
+
+#### *  param_lan_host_show_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("show", "detail" - "detail" also documents the `all` alternative to `mac=`). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_lan_host_show_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  lan_host_show *string (optional)* *array_of_strings*
+This function shows a single LAN host, matched by its mac address - same columns and colors as list_lan_hosts (**green = online** / **purple = offline**), but for one host only (like vm_show relative to list_vm). Fetches the single-host endpoint directly (`GET /lan/browser/<interface>/ether-<mac>/`) rather than fetching the whole list and filtering.
+##### Example:
+```bash
+lan_host_show
+```
+```bash
+
+ERROR: "lan_host_show" takes an optional 'interface' then 'mac=':
+interface		# lan interface, ex: pub (optional, default: pub)
+mac=			# mac address of the host, ex: aa:e7:cf:5b:38:72
+
+NOTE: please run "list_lan_hosts <interface>" to get the list of all hosts and their mac address
+
+EXAMPLE:
+lan_host_show mac="aa:e7:cf:5b:38:72"
+
+EXAMPLE (specific interface):
+lan_host_show pub mac="aa:e7:cf:5b:38:72"
+```
+##### Example:
+```bash
+lan_host_show mac=d0:23:db:36:15:aa
+```
+```bash
+
+				LAN HOST (interface: pub):
+
+id:                           mac:                state:      vendor:                         name:
+ether-d0:23:db:36:15:aa       d0:23:db:36:15:aa   online      Apple, Inc.                     iPhone r0ro
+```
+
+-------------------------------------------------------------------------------
+
+#### *  lan_host_detail *string (optional)* *array_of_strings*
+This function prints the full detail of a single LAN host, matched by its mac address (like vm_detail relative to vm_show): every property, every discovered name and its source, every ip/ipv6 address the host has used, and every piece of additional discovery information gathered by the freebox.
+- **every ip/ipv6 address the host has used**: a host can have an ipv4 address AND one or more ipv6 addresses active at the same time (confirmed against the freebox API's own LanHost object definition), so this loops over the entire `l3connectivities[]` array instead of only showing `l3connectivities[0]` like list_lan_hosts does for its compact table view.
+- **additional discovery information (the `info` object)**: printed in human readable form, grouped by discovery source (`dhcp`, `mdns`, `upnp`, ...) instead of as raw JSON. The keys inside each source are entirely dynamic (ex: `"Service: raop"`, `"Vendor Class Identifier"`, `"modelName"`) - nothing is hardcoded, this reuses the library's own JSON tokenizer output and only filters out the redundant aggregate lines.
+- **`all` instead of `mac=`**: prints full detail for every host discovered on the interface, one after another, instead of a single host.
+##### Example:
+```bash
+lan_host_detail
+```
+```bash
+
+ERROR: "lan_host_detail" takes an optional 'interface' then 'mac=' (or the keyword 'all'):
+interface		# lan interface, ex: pub (optional, default: pub)
+mac=			# mac address of the host, ex: aa:e7:cf:5b:38:72
+all			# instead of mac=, show full detail for EVERY host on the interface
+
+NOTE: please run "list_lan_hosts <interface>" to get the list of all hosts and their mac address
+
+EXAMPLE:
+lan_host_detail mac="aa:e7:cf:5b:38:72"
+
+EXAMPLE (specific interface):
+lan_host_detail pub mac="aa:e7:cf:5b:38:72"
+
+EXAMPLE (every host):
+lan_host_detail all
+```
+##### Example:
+```bash
+lan_host_detail mac=00:24:d4:7e:00:4c
+```
+```bash
+
+LAN HOST ether-00:24:d4:7e:00:4c : Full details properties :
+
+	primary_name = Freebox Player
+	domain_name = freebox-player.home
+	host_type = freebox_delta
+	vendor_name = Freebox Sas
+	mac_address = 00:24:d4:7e:00:4c
+	persistent = false
+	reachable = true
+	active = true
+	first_activity = 1300000001 (Sun Mar 13 07:06:41 UTC 2011)
+	last_activity = 1360669491 (Tue Feb 12 11:44:51 UTC 2013)
+
+	all ip / ipv6 addresses used by this host:
+	  [ipv4]	192.168.100.88	(active=true, reachable=true)
+
+	all discovered names for this host:
+	  Freebox Player	(source: dhcp)
+
+	additional discovery information (info):
+	  [dhcp]
+		Host Name = Freebox Player
+		Vendor Class Identifier = linux-fbx7hd
+	  [mdns]
+		Service: raop = 192.168.100.88:5000 (tcp)
+		Service: airplay = 192.168.100.88:7000 (tcp)
+	  [upnp]
+		modelName = Freebox Player
+		friendlyName = Freebox Player
+		manufacturer = Freebox
+		service[0] = urn:dial-multiscreen-org:serviceId:dial
+		deviceType = urn:dial-multiscreen-org:device:dial:1
+```
+##### Example (every host):
+```bash
+lan_host_detail all
+```
+```bash
+
+LAN HOST ether-d0:23:db:36:15:aa : Full details properties :
+
+	primary_name = iPhone r0ro
+	domain_name = 
+	host_type = smartphone
+	vendor_name = Apple, Inc.
+	mac_address = d0:23:db:36:15:aa
+	persistent = true
+	reachable = true
+	active = true
+	first_activity = 1300000000 (Sun Mar 13 07:06:40 UTC 2011)
+	last_activity = 1360669498 (Tue Feb 12 11:44:58 UTC 2013)
+
+	all ip / ipv6 addresses used by this host:
+	  [ipv4]	192.168.69.20	(active=true, reachable=true)
+	  [ipv6]	2001:db8::1	(active=true, reachable=true)
+
+	all discovered names for this host:
+	  iPhone-r0ro	(source: dhcp)
+
+	additional discovery information (info):
+	  (no additional discovery information)
+
+
+LAN HOST ether-00:24:d4:7e:00:4c : Full details properties :
+
+	primary_name = Freebox Player
+	domain_name = freebox-player.home
+	host_type = freebox_delta
+	vendor_name = Freebox Sas
+	mac_address = 00:24:d4:7e:00:4c
+	persistent = false
+	reachable = true
+	active = true
+	first_activity = 1300000001 (Sun Mar 13 07:06:41 UTC 2011)
+	last_activity = 1360669491 (Tue Feb 12 11:44:51 UTC 2013)
+
+	all ip / ipv6 addresses used by this host:
+	  [ipv4]	192.168.100.88	(active=true, reachable=true)
+
+	all discovered names for this host:
+	  Freebox Player	(source: dhcp)
+
+	additional discovery information (info):
+	  [dhcp]
+		Host Name = Freebox Player
+		Vendor Class Identifier = linux-fbx7hd
+	  [mdns]
+		Service: raop = 192.168.100.88:5000 (tcp)
+		Service: airplay = 192.168.100.88:7000 (tcp)
+	  [upnp]
+		modelName = Freebox Player
+		friendlyName = Freebox Player
+		manufacturer = Freebox
+		service[0] = urn:dial-multiscreen-org:serviceId:dial
+		deviceType = urn:dial-multiscreen-org:device:dial:1
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="IPV6"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: IPv6 CONNECTION CONFIGURATION
+-----------------
+
+- This API lets you manage global IPv6 connection settings and route one of your 8 delegated `/64` prefixes to a specific LAN device (`/connection/ipv6/config/`)
+- For the IPv6 DHCP server itself, see [DHCPv6 SERVER CONFIGURATION](#DHCPV6)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_ipv6_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_ipv6_config. If not, function param_ipv6_config_err will be called. This function returns a 'json' object (partial update).
+This function also checks every field is a boolean.
+##### Example:
+```bash
+check_and_feed_ipv6_config_param ipv6_firewall="true"
+echo -e "${ipv6_config_object}"
+```
+```bash
+{"ipv6_firewall":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_ipv6_config_err
+This function will display help / manual and example on upd_ipv6_config. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_ipv6_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_ipv6_config
+This function prints the current IPv6 connection configuration, including the delegated `/64` prefixes and which one, if any, is routed to a LAN device.
+##### Example:
+```bash
+list_ipv6_config
+```
+```bash
+
+				IPv6 CONNECTION CONFIGURATION:
+
+IPv6:			enabled
+IPv6 FIREWALL:		true	PREFIX FIREWALL:	true
+LINK-LOCAL ADDRESS:	fe80::224:d4ff:acac:ecec
+
+#:	prefix:					next_hop:
+0:	2a01:e30:d252:a2a0::/64	(not routed)
+1:	2a01:e30:d252:a2a1::/64	(not routed)
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_ipv6_config *array_of_strings*
+This function updates the global IPv6 connection settings (partial update): `ipv6_enabled=`, `ipv6_firewall=`, `ipv6_prefix_firewall=`.
+##### Example:
+```bash
+upd_ipv6_config ipv6_firewall="false"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"ipv6_firewall":false}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_ipv6_delegation_err
+This function will display help / manual and example on upd_ipv6_delegation (below). This function also sets variable "error=1". This function return error=1 when it has been called.
+
+-------------------------------------------------------------------------------
+
+#### *  upd_ipv6_delegation *string* *array_of_strings*
+This function routes one of the delegated `/64` prefixes to a LAN device's IPv6 link-local address (`next_hop=`), or un-routes it (`next_hop=""`). Same whole-array read/patch/write pattern as [`upd_lan_route`](#ROUTE), pure bash, jq never required.
+##### Example:
+```bash
+upd_ipv6_delegation "2a01:e30:d252:a2a1::/64" next_hop="fe80::be30:5bff:feb5:fcc7"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"delegations":[{"prefix":"2a01:e30:d252:a2a0::/64","next_hop":""},{"prefix":"2a01:e30:d252:a2a1::/64","next_hop":"fe80::be30:5bff:feb5:fcc7"}]}
+```
+##### Example:
+```bash
+list_ipv6_config
+```
+```bash
+
+				IPv6 CONNECTION CONFIGURATION:
+
+IPv6:			enabled
+IPv6 FIREWALL:		true	PREFIX FIREWALL:	true
+LINK-LOCAL ADDRESS:	fe80::224:d4ff:acac:ecec
+
+#:	prefix:					next_hop:
+0:	2a01:e30:d252:a2a0::/64	(not routed)
+1:	2a01:e30:d252:a2a1::/64	fe80::be30:5bff:feb5:fcc7
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
+
+<a name="DHCPV6"></a>
+
+API FRONTEND FUNCTIONS - NETWORK: DHCPv6 SERVER CONFIGURATION
+-----------------
+
+- This API lets you manage the DHCPv6 server (`/dhcpv6/config/`)
+
+##### WARNING
+To use these functions, your application which login the API MUST be granted to modify your box setup parameters (from freeboxOS web interface, see: [GRANT API ACCESS](#GRANTAXX))
+
+##### WARNING
+On some Android devices, enabling the DHCPv6 server may break IPv6 connectivity on that device.
+
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_dhcpv6_config_param *array_of_strings*
+This function will check if the provided arguments are valid parameters for upd_dhcpv6_config. If not, function param_dhcpv6_config_err will be called. This function returns a 'json' object (partial update).
+This function also checks every field is a boolean.
+##### Example:
+```bash
+check_and_feed_dhcpv6_config_param enabled="true"
+echo -e "${dhcpv6_config_object}"
+```
+```bash
+{"enabled":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_dhcpv6_config_err
+This function will display help / manual and example on upd_dhcpv6_config. This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_dhcpv6_config_param' function
+
+-------------------------------------------------------------------------------
+
+#### *  list_dhcpv6_config
+This function prints the current DHCPv6 server configuration.
+##### Example:
+```bash
+list_dhcpv6_config
+```
+```bash
+
+				DHCPv6 SERVER CONFIGURATION:
+
+DHCPv6 SERVER:		enabled
+NOTE: enabling the DHCPv6 server may break IPv6 connectivity on some Android devices
+USE CUSTOM DNS:		false
+DNS SERVERS:		2a01:e30:1234::1 (read-only via this API)
+```
+
+-------------------------------------------------------------------------------
+
+#### *  upd_dhcpv6_config *array_of_strings*
+This function updates the DHCPv6 server configuration (partial update): `enabled=`, `use_custom_dns=`. `dns[]` is read-only via this API.
+##### Example:
+```bash
+upd_dhcpv6_config enabled="false"
+```
+```bash
+
+operation completed: 
+{"success":true}
+
+result:
+{"enabled":false}
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
+
+__________________________________________________________________________________________
+
 
 <a name="FS"></a>
 
@@ -4413,6 +6186,547 @@ Since the whole documentation had been written, the new Freebox ULTRA appears in
 
 <br />
 
+-------------------------------------------------------------------------------
+
+
+#### *  check_and_feed_vm_action_param *array_of_strings*
+This function validates the parameters common to every VM action (`id`, and `mode` for console/sconsole), depending on the "action" set by the calling function ("start", "stop", "restart", "reload", "shutdown", "delete", "show", "detail", "console", "sconsole", "vnc", "svnc"). If not, function param_vm_action_err will be called. This function returns non-local `vm_action_param_object` (the validated `mode`, for console/sconsole) and also checks that the required external tool is available (`websocat` for console/vnc, `vncviewer` for vnc/svnc, `screen`/`dtach` for console modes).
+
+-------------------------------------------------------------------------------
+
+#### *  check_vm_param *array_of_strings*
+This function validates the parameters for vm_add ("action=add") and vm_modify ("action=modify") against the full list of VM parameters (see vm_param below). If not, function param_vm_action_err will be called.
+
+-------------------------------------------------------------------------------
+
+#### *  param_vm_action_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("start", "stop", "restart", "reload", "shutdown", "delete", "show", "detail", "add", "modify", "console", "sconsole", "vnc", "svnc"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'check_and_feed_vm_action_param' / 'check_vm_param' functions
+##### Example:
+```bash
+vm_start
+```
+```bash
+
+ERROR: <param> must be :
+id			# id must be a number
+
+NOTE: you can get a list of all virtuals machines (showing all 'id'), just run: 
+list_vm
+
+EXAMPLE:
+vm_start 5 
+```
+##### Example:
+```bash
+vm_console
+```
+```bash
+
+ERROR: <param> must be :
+id		# id must be a number
+mode		# (Optional) can be 'screen' to launch console in a SCREEN - need 'GNU screen'
+		# or mode can be 'detached' to detach console in a pipe attached to terminal - need 'GNU dtach'
+
+NOTE: you can get a list of all virtuals machines (showing all 'id'), just run: 
+list_vm
+
+EXAMPLE:
+vm_console 5 
+
+EXAMPLE FULL:
+vm_console 5 screen
+vm_console 5 detached 
+```
+##### Example:
+```bash
+vm_add
+```
+```bash
+
+ERROR: <param> must be some of:
+name=
+vcpu=
+memory=
+disk_type=
+disk_path=
+cd_path=
+os=
+enable_screen=
+bind_usb_ports=
+enable_cloudinit=
+cloudinit_hostname=
+cloudinit_userdata=
+
+Please run 'vm_param' with no parameters for parameters detail
+
+NOTE: minimum parameters to specify on cmdline to create a VM: 
+disk_type= 
+disk_path= 
+vcpus= 
+memory= 
+name= 
+
+EXAMPLE:
+vm_add disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" vcpus="1" memory="2048" cd_path="/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso" os="debian" enable_screen="true"  enable_cloudinit="true" cloudinit_hostname="14RV-FSRV-49" cloudinit_userdata="cloudinit-userdata.yml" bind_usb_ports='"usb-external-type-c","usb-external-type-a"' name="14RV-FSRV-49.dmz.lan"
+```
+##### Example:
+```bash
+vm_modify
+```
+```bash
+
+ERROR: <param> must be some of:
+<id>
+name=
+vcpu=
+memory=
+disk_type=
+disk_path=
+cd_path=
+os=
+enable_screen=
+bind_usb_ports=
+enable_cloudinit=
+cloudinit_hostname=
+cloudinit_userdata=
+
+Please run 'vm_param' with no parameters for parameters detail
+
+NOTE: minimum parameters to specify on cmdline to modify a VM: 
+<id> 
+disk_type= 
+disk_path= 
+vcpus= 
+memory= 
+name= 
+
+EXAMPLE:
+vm_modify 31 disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" vcpus="1" memory="2048" cd_path="/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso" os="debian" enable_screen="true" cloudinit_hostname="14RV-FSRV-49" cloudinit_userdata="cloudinit-userdata.yml" bind_usb_ports='"usb-external-type-c","usb-external-type-a"' name="14RV-FSRV-49.dmz.lan"
+
+WARNING: 
+When modifying VM, if you do not explicitly specify on the cmdline 'cloudinit_userdata=$val' ($val' must be a 'yaml cloudinit' file), previous values for 'cloudinit_userdata' parameter will be reset to null (''). Others values are retrieve automatically from existing VM configuration
+```
+
+-------------------------------------------------------------------------------
+
+#### *  param_vm_disk_err
+This function will display help / manual and example on the command which calling it, depending on the "action" set by the calling function ("adddisk", "deldisk", "listdisk", "resizedisk"). This function also sets variable "error=1". This function return error=1 when it has been called.
+This function is mostly called by 'feeds_vmdisk_variables' function
+##### Example:
+```bash
+vm_adddisk
+```
+```bash
+
+ERROR: <param> for 'vm_adddisk' must be :
+disk_type=
+disk_path=
+size=
+
+EXAMPLE:
+vm_adddisk disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" size="10737418240" 
+
+NOTE: you can get a list of all virtuals machines disks, just run: 
+vm_listdisk /path/to/vm/disk/
+```
+##### Example:
+```bash
+vm_deldisk
+```
+```bash
+
+ERROR: <param> must be :
+path-to-vmdisk-image		# path to vmdisk image file on freebox storage
+
+NOTE: to get virtuals machines disk image path, just run: 
+vm_detail <id>
+
+EXAMPLE:
+vm_deldisk /path/to/vm/disk/images/myvm.qcow2 
+```
+##### Example:
+```bash
+vm_listdisk
+```
+```bash
+
+ERROR: <param> must be :
+diskpath		# diskpath must be a a valid path on freebox storage
+
+NOTE: to get virtuals machines disk path, just run: 
+vm_detail <id>
+
+EXAMPLE:
+vm_listdisk /path/to/vm/disk_images/ 
+```
+##### Example:
+```bash
+vm_resizedisk
+```
+```bash
+
+ERROR: <param> for 'vm_resizedisk' must be :
+disk_shrink=
+disk_path=
+size=
+
+EXAMPLE:
+vm_resizedisk disk_shrink="0" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" size="10737418240" 
+
+NOTE: you can get a list of all virtuals machines disks, just run: 
+vm_listdisk /path/to/vm/disk/
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_param
+This function prints the full detail of every parameter usable with vm_add / vm_modify (type, whether it applies to the VM or its disk, constraints). Always returns 1 (it's a help/reference function, not an action).
+##### Example:
+```bash
+vm_param
+```
+```bash
+VM PARAMETERS :  
+         - <id>                 : <id> of this VM - not modifiable (number : 0 <= id <32) 
+         - mac                  : mac address of this VM - not modifiable (format: xx:xx:xx:xx:xx) 
+         - name=                : name of this VM - VM-only (string, max 31 characters) 
+         - vcpu=                : number of virtual CPUs to allocate to this VM - VM-only (integer)
+         - memory=              : memory allocated to this VM in megabytes - VM-only (integer)
+         - disk_type=           : type of disk image, values : qcow2|raw - VM+disk (string)
+         - disk_path=           : path to the hard disk image of this VM - VM+disk (string)
+         - disk_size=           : hard disk final size in bytes (integer) - disk-only
+         - disk_shrink=         : allow or not the disk to be shrink - disk-only (bool) DANGEROUS
+         - cd_path=             : path to CDROM device ISO image - optional - VM-only (string) 
+         - os=                  : VM OS: unknown|fedora|debian|ubuntu|freebsd|centos|jeedom|homebridge 
+         - enable_screen=       : virtual screen using VNC websocket protocol - VM-only (bool) 
+         - bind_usb_ports=      : syntax : bind_usb_ports='"usb-external-type-c","usb-external-type-a"' 
+         - enable_cloudinit=    : enable or not  passing data through cloudinit - VM-only (bool) 
+         - cloudinit_hostname=  : when cloudinit is enabled: hostname (string, max 59 characters)
+         - cloudinit_userdata=  : path to file containing user-data raw yaml (file max 32767 characters)
+
+WARNING : when you modify a VM, you must explicitly specify on the cmdline 'cloudinit_userdata=$val',
+          or previous values for 'cloudinit_userdata' parameter will be reset to null ('') 
+```
+
+-------------------------------------------------------------------------------
+
+#### *  list_vm / vm_list *integer (optional)*
+This function lists all VM (id, status, name, mac address), colored **green = running** / **white+colored fields = not running**. If an `id` is given, only that VM is shown. `vm_list` is the auto_relogin-safe wrapper (`auto_relogin && list_vm`).
+##### Example:
+```bash
+list_vm
+```
+```bash
+			VIRTUAL MACHINE ID, NAME, MAC AND STATUS : 
+----------------------------------------------------------------------------------------------
+VM-0:	id: 0 	 status: running 	name: 14RV-FSRV-49.dmz.lan 	mac_address: 00:24:d4:00:00:01
+VM-1:	id: 1 	 status: stopped 	name: debian-test 	mac_address: 00:24:d4:00:00:02
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_show *integer*
+This function shows a single VM by `id` (thin wrapper around list_vm with auto_relogin).
+##### Example:
+```bash
+vm_show 0
+```
+```bash
+			VIRTUAL MACHINE ID, NAME, MAC AND STATUS : 
+----------------------------------------------------------------------------------------------
+VM-0:	id: 0 	 status: running 	name: 14RV-FSRV-49.dmz.lan 	mac_address: 00:24:d4:00:00:01
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_detail *integer*
+This function prints the full configuration and status detail of a single VM by `id` (all vm_param fields, plus the raw JSON VM object used internally for vm_modify).
+##### Example:
+```bash
+vm_detail 0
+```
+```bash
+
+VM-0 : Full details properties :
+
+	name = 14RV-FSRV-49.dmz.lan
+	id = 0
+	status = running
+	memory = 2048
+	vcpus = 1
+	disk_type = qcow2
+	disk_path = /freeboxdisk/vmdiskpath/myvmdisk.qcow2
+	cd_path = 
+	mac_address = 00:24:d4:00:00:01
+	os = debian
+	enable_screen = true
+	bind_usb_ports = ["",""]
+	enable_cloudinit = true
+	cloudinit_hostname = 14RV-FSRV-49
+	cloudinit_userdata = ...
+	json_vm_object = {"mac":00:24:d4:00:00:01,"cloudinit_userdata":...,"cd_path":,"id":0,"os":debian,"enable_cloudinit":true,"disk_path":/freeboxdisk/vmdiskpath/myvmdisk.qcow2,"vcpus":1,"memory":2048,"name":14RV-FSRV-49.dmz.lan,"cloudinit_hostname":14RV-FSRV-49,"status":running,"bind_usb_ports":["",""],"enable_screen":true,"disk_type":qcow2}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_resource
+This function prints the freebox's total and currently available hardware resources for VMs (memory and CPUs), as raw JSON.
+##### Example:
+```bash
+vm_resource
+```
+```bash
+{"success":true,"result":{"total_memory":8589934592,"usable_memory":6442450944,"total_cpus":4,"usable_cpus":3}}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_start / vm_restart / vm_stop / vm_shutdown *integer*
+These functions control a VM's power state by `id`: `vm_start` boots it, `vm_restart` hard-stops (electrically) then starts it again, `vm_stop` hard-stops it (electrically - equivalent to pulling the plug), `vm_shutdown` sends an ACPI shutdown signal (a clean/graceful shutdown, like pressing a physical power button). All support auto_relogin automatically.
+##### Example:
+```bash
+vm_start 0
+```
+```bash
+
+operation completed: 
+{"success":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_reload *integer*
+This function sends an ACPI shutdown to the VM, waits for it to actually stop, then starts it again (a full clean reboot cycle, as opposed to vm_restart which is an immediate hard power-cycle).
+
+-------------------------------------------------------------------------------
+
+#### *  vm_delete *integer*
+This function deletes a VM by `id` (the VM's disk image is not deleted - use vm_deldisk separately if you also want to remove the disk).
+##### Example:
+```bash
+vm_delete 0
+```
+```bash
+
+VM delete status:  {"success":true}
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_add *array_of_strings*
+This function creates a new VM. See vm_param above for the full list of parameters; minimum required: `disk_type=`, `disk_path=`, `vcpus=`, `memory=`, `name=`.
+##### Example:
+```bash
+vm_add
+```
+```bash
+
+ERROR: <param> must be some of:
+name=
+vcpu=
+memory=
+disk_type=
+disk_path=
+cd_path=
+os=
+enable_screen=
+bind_usb_ports=
+enable_cloudinit=
+cloudinit_hostname=
+cloudinit_userdata=
+
+Please run 'vm_param' with no parameters for parameters detail
+
+NOTE: minimum parameters to specify on cmdline to create a VM: 
+disk_type= 
+disk_path= 
+vcpus= 
+memory= 
+name= 
+
+EXAMPLE:
+vm_add disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" vcpus="1" memory="2048" cd_path="/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso" os="debian" enable_screen="true"  enable_cloudinit="true" cloudinit_hostname="14RV-FSRV-49" cloudinit_userdata="cloudinit-userdata.yml" bind_usb_ports='"usb-external-type-c","usb-external-type-a"' name="14RV-FSRV-49.dmz.lan"
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_modify *integer* *array_of_strings*
+This function modifies an existing VM's parameters (`id` then the same parameters as vm_add).
+##### WARNING
+When modifying a VM, if you do not explicitly specify `cloudinit_userdata=$val` on the command line, the previous value for that parameter **will be reset to null** - every other unspecified value is retrieved automatically from the existing VM configuration.
+##### Example:
+```bash
+vm_modify
+```
+```bash
+
+ERROR: <param> must be some of:
+<id>
+name=
+vcpu=
+memory=
+disk_type=
+disk_path=
+cd_path=
+os=
+enable_screen=
+bind_usb_ports=
+enable_cloudinit=
+cloudinit_hostname=
+cloudinit_userdata=
+
+Please run 'vm_param' with no parameters for parameters detail
+
+NOTE: minimum parameters to specify on cmdline to modify a VM: 
+<id> 
+disk_type= 
+disk_path= 
+vcpus= 
+memory= 
+name= 
+
+EXAMPLE:
+vm_modify 31 disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" vcpus="1" memory="2048" cd_path="/freeboxdisk/vmisopath/debian-11.0.0-arm64-netinst.iso" os="debian" enable_screen="true" cloudinit_hostname="14RV-FSRV-49" cloudinit_userdata="cloudinit-userdata.yml" bind_usb_ports='"usb-external-type-c","usb-external-type-a"' name="14RV-FSRV-49.dmz.lan"
+
+WARNING: 
+When modifying VM, if you do not explicitly specify on the cmdline 'cloudinit_userdata=$val' ($val' must be a 'yaml cloudinit' file), previous values for 'cloudinit_userdata' parameter will be reset to null (''). Others values are retrieve automatically from existing VM configuration
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_listdisk *string*
+This function lists all VM disk images (qcow2, raw, iso, img) found under the given freebox storage path.
+##### Example:
+```bash
+vm_listdisk
+```
+```bash
+
+ERROR: <param> must be :
+diskpath		# diskpath must be a a valid path on freebox storage
+
+NOTE: to get virtuals machines disk path, just run: 
+vm_detail <id>
+
+EXAMPLE:
+vm_listdisk /path/to/vm/disk_images/ 
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_adddisk *array_of_strings*
+This function creates a new VM disk image (`disk_type=`, `disk_path=`, `size=` in bytes). This is an asynchronous freebox task: the function creates the task, then polls and prints `/vm/disk/task/<id>` until it completes, then deletes the finished task and shows the resulting file via vm_listdisk.
+##### Example:
+```bash
+vm_adddisk
+```
+```bash
+
+ERROR: <param> for 'vm_adddisk' must be :
+disk_type=
+disk_path=
+size=
+
+EXAMPLE:
+vm_adddisk disk_type="qcow2" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" size="10737418240" 
+
+NOTE: you can get a list of all virtuals machines disks, just run: 
+vm_listdisk /path/to/vm/disk/
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_resizedisk *array_of_strings*
+This function resizes an existing VM disk image (`disk_shrink=` `disk_path=` `size=` in bytes). Same asynchronous task pattern as vm_adddisk, with a progress spinner while the resize is in progress.
+##### WARNING
+Shrinking a disk (`disk_shrink="1"`/`true`) is **DANGEROUS** - see vm_param above.
+##### Example:
+```bash
+vm_resizedisk
+```
+```bash
+
+ERROR: <param> for 'vm_resizedisk' must be :
+disk_shrink=
+disk_path=
+size=
+
+EXAMPLE:
+vm_resizedisk disk_shrink="0" disk_path="/freeboxdisk/vmdiskpath/myvmdisk.qcow2" size="10737418240" 
+
+NOTE: you can get a list of all virtuals machines disks, just run: 
+vm_listdisk /path/to/vm/disk/
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_deldisk *string*
+This function deletes a VM disk image file, identified by its full path on freebox storage (get it from vm_detail). Same asynchronous task pattern as vm_adddisk/vm_resizedisk.
+##### Example:
+```bash
+vm_deldisk
+```
+```bash
+
+ERROR: <param> must be :
+path-to-vmdisk-image		# path to vmdisk image file on freebox storage
+
+NOTE: to get virtuals machines disk image path, just run: 
+vm_detail <id>
+
+EXAMPLE:
+vm_deldisk /path/to/vm/disk/images/myvm.qcow2 
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_console / vm_sconsole *integer* *string (optional)*
+These functions open an interactive VM console over the freebox Websocket API (an Out-Of-Band access, independent of the VM's own network stack) - `vm_sconsole` starts the VM first. Optional `mode`: `screen` (opens the console inside a new GNU `screen` session) or `detached` (detaches the console into a pipe attached to the terminal, using GNU `dtach`). Requires the `websocat` external tool (and `screen`/`dtach` if `mode` is used).
+##### Example:
+```bash
+vm_console
+```
+```bash
+
+ERROR: <param> must be :
+id		# id must be a number
+mode		# (Optional) can be 'screen' to launch console in a SCREEN - need 'GNU screen'
+		# or mode can be 'detached' to detach console in a pipe attached to terminal - need 'GNU dtach'
+
+NOTE: you can get a list of all virtuals machines (showing all 'id'), just run: 
+list_vm
+
+EXAMPLE:
+vm_console 5 
+
+EXAMPLE FULL:
+vm_console 5 screen
+vm_console 5 detached 
+```
+
+-------------------------------------------------------------------------------
+
+#### *  vm_vnc / vm_svnc *integer*
+These functions launch the VM's virtual display screen over VNC through the freebox Websocket API - `vm_svnc` starts the VM first. Requires `enable_screen=true` to have been set on the VM (see vm_param), and the external tools `websocat` and `vncviewer` (a TigerVNC client - see https://tigervnc.org/).
+##### Example:
+```bash
+vm_vnc
+```
+```bash
+
+ERROR: <param> must be :
+id			# id must be a number
+
+NOTE: you can get a list of all virtuals machines (showing all 'id'), just run: 
+list_vm
+
+EXAMPLE:
+vm_vnc 5 
+```
+
+-------------------------------------------------------------------------------
+
 __________________________________________________________________________________________
 | [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
 |:-:|:-:|:-:|:-:|:-:|
@@ -4969,6 +7283,45 @@ ________________________________________________________________________________
 |:-:|:-:|:-:|:-:|:-:|
 
 
+
+__________________________________________________________________________________________
+
+<a name="BACKUP"></a>   
+
+
+API FRONTEND FUNCTIONS - CONFIGURATION BACKUP
+-----------------
+You must notice that today, this API is not documented.
+As describes in the Freebox developper documentation, UNDOCUMENTED API MUST NOT BE USED !
+
+But being able to automate a full backup of your freebox configuration is genuinely useful (and there is no other way to get it), so this function has been implemented. It downloads the same `.bin` configuration backup file that the FreeboxOS web interface itself produces, using the (undocumented) `backup/config/export` endpoint. It's been working reliably for years, so - exactly like [DOMAIN NAME FUNCTIONS](#DOMAIN) above - it is treated as a gap in the official documentation rather than a reason to leave it out, but please $${\color{red}\text{USE AT YOUR OWN RISK }}$$
+
+<br />
+
+**Note :**   
+$${\color{red}\text{UNDOCUMENTED API MUST NOT BE USED ! }}$$ 
+
+<br />
+
+-------------------------------------------------------------------------------
+
+
+#### *  backup_fbx_config
+This function downloads a full backup of your freebox configuration to a local file named `config_fbx_<YYYYMMDD-HHMMSS>.bin` in the current directory. This is the exact same backup file the FreeboxOS web interface produces - useful for automating regular, unattended backups (ex: from a cron job).
+Your application must be granted to modify the setup of the freebox to use this function (from freebox web interface, see: [GRANT API ACCESS](#GRANTAXX))
+##### Example:
+```bash
+backup_fbx_config
+```
+```bash
+-rw-r--r-- 1 user user 45678 Aug  4 10:00 config_fbx_20260804-100000.bin
+```
+
+-------------------------------------------------------------------------------
+
+__________________________________________________________________________________________
+| [TOP](#TOP) | [TABLE OF CONTENTS](#TOC1) | [EXTRAS](#TOC2) | [EXTERNAL RESSOURCES](#TOC3) | [EXTERNAL TOOLS](#TOC4) |
+|:-:|:-:|:-:|:-:|:-:|
 
 __________________________________________________________________________________________
 

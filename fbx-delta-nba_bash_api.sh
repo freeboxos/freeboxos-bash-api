@@ -7,7 +7,7 @@
 ##_________________________________________________________________________________________
 ##
 ##
-##   THIS BASH LIBRARY (from 2013 to 2024):
+##   THIS BASH LIBRARY (from 2013 to 2026):
 ##           => allow you to call all HTTPS & WEBSOCKET API on Freebox / Iliadbox
 ##           => provide all backend function for calling API, login...
 ##           => was designed first for Virtual Machines management on Freebox Delta
@@ -72,9 +72,9 @@ FREEBOX_LAN_URL=""
 ILIADBOX_LAN_URL=""
 
 # Freebox WAN URL (optional, will be used if set)
-# This option require you add a local domain name and a private certificate 
+# This option require you add a public domain name and a private certificate
 # in your freebox / iliadbox in FreeboxOS> parameters > domain names
-# NB: This option MUST be null: "" or commented if you do not use it 
+# NB: This option MUST be null: "" or commented if you do not use it
 # NB: Working the same way for ILIADBOX_WAN_URL
 # As an example to access my box API from WAN I set :
 # FREEBOX_WAN_URL="https://fbx.my-public-domain.net:2111"
@@ -82,10 +82,10 @@ FREEBOX_WAN_URL=""
 ILIADBOX_WAN_URL=""
 
 
-# API SECURE ACCESS: PKI SUPPORT & ROOT CA CERTIFICATE 
-# This PKI support let us add support for different private CA like Freebox Private CA 
+# API SECURE ACCESS: PKI SUPPORT & ROOT CA CERTIFICATE
+# This PKI support let us add support for different private CA like Freebox Private CA
 # and let us create a Certificate CA Bundle with all declared private rootCA
-# and public CA certificate chain or to fallback to insecure TLS mode (curl -k) 
+# and public CA certificate chain or to fallback to insecure TLS mode (curl -k)
 
 # WARNING : curl 8 TLS backends (OpenSSL or GNUTLS)
 # curl8 + GNUTLS backend read the bundle of CA certificate by the end where
@@ -95,14 +95,19 @@ ILIADBOX_WAN_URL=""
 # You must not use 2 DIFFERENTS CA certificate (LAN + WAN) but with the same CN:
 # in state, it will work with curl8 + openssl backend (the CA certificate
 # of the target URL is positioned first in the cacert bundle) but as curl8 + gnutls
-# read the cacert bundle by the end, in this case you need to change the order of the LAN 
-# and WAN CA certificate in the bundle (dirty but simple: switch LAN and WAN CA certificate 
+# read the cacert bundle by the end, in this case you need to change the order of the LAN
+# and WAN CA certificate in the bundle (dirty but simple: switch LAN and WAN CA certificate
 # files in the followiing configuration)
+
+# NOTE: Already installed Root CA Certificate:
+# If you use a TLS certificate signed by a public or private Certificate Authority
+# and if you have already installed this Certificate Authority on your system certificate
+# store, you can leave null FREEBOX_LAN_CACERT="" or FREEBOX_WAN_CACERT=""
 
 # Local & private CA certificate used for local domain defined in $FREEBOX_LAN_URL:
 # NB: Only need this option if your local domain use a certificate from a pivate CA
 # NB: Working the same way for ILIADBOX_LAN_CACERT
-# Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so  
+# Here my $FREEBOX_LAN_URL certificate had been signed by my private RSA4096 CA, so
 # for example to access my box API from my LAN domain using my LAN private PKI I set:
 #FREEBOX_LAN_CACERT="/usr/share/ca-certificates/user/my-private-domain-rootCA.pem"
 FREEBOX_LAN_CACERT=""
@@ -118,8 +123,8 @@ FREEBOX_WAN_CACERT=""
 ILIADBOX_WAN_CACERT=""
 
 # Config file:
-# You can provide a configuration file overriding 4 configured values of this library 
-# NB: FREEBOX_URL will override FREEBOX_LAN_URL and FREEBOX_WAN_URL 
+# You can provide a configuration file overriding 4 configured values of this library
+# NB: FREEBOX_URL will override FREEBOX_LAN_URL and FREEBOX_WAN_URL
 # NB: FREEBOX_CACERT will override FREEBOX_LAN_CACERT and FREEBOX_WAN_CACERT
 # NB: FREEBOX_URL should be used with FREEBOX_CACERT
 # NB: config file must only contains values you want to override
@@ -139,14 +144,14 @@ _CONFIG_FILE=
 
 
 # Freebox / Iliadbox default local URL :   --hardcoded-- 
-# (default, hardcoded, used if $FREEBOX_WAN_URL and $FREEBOX_LAN_URL are not set 
-# or for Iliadbox if $ILIADBOX_WAN_URL and $ILIADBOX_LAN_URL are not set) 
+# (default, hardcoded, used if $FREEBOX_WAN_URL and $FREEBOX_LAN_URL are not set
+# or for Iliadbox if $ILIADBOX_WAN_URL and $ILIADBOX_LAN_URL are not set)
 # Freebox API will always be reachable on this URL from freebox lan network
 FREEBOX_DEFAULT_URL="https://mafreebox.freebox.fr"
 ILIADBOX_DEFAULT_URL="https://myiliadbox.iliad.it"
 
 
-# Freebox Root Certificate Authority (rootCA) :   --hardcoded-- 
+# Freebox Root Certificate Authority (rootCA) :   --hardcoded--
 # --> RSA (Freebox Root CA): valid until 2035-20-25
 # --> ECDSA (Freebox ECC Root CA): valid until 2035-08-27
 FREEBOX_DEFAULT_CACERT="-----BEGIN CERTIFICATE-----
@@ -249,9 +254,9 @@ Yu11tlZsB2Iw/TT1EyPVb5z6tK4wUgWLNFAvjXU=
 
 
 ###########################################################################################
-## 
+##
 ## CERTIFICATE and URL: Management - Policies - Bundle
-## 
+##
 ###########################################################################################
 
 #-------------------------------- CONFIG FILE OVERRIDE ----------------------------------#
@@ -267,13 +272,13 @@ Yu11tlZsB2Iw/TT1EyPVb5z6tK4wUgWLNFAvjXU=
 	&& if [[ "${_PASSWORD}" =~ [[:print:]] ]]; then _APP_PASSWORD=${_PASSWORD}; fi
 [[ "${_FREEBOX_URL}" != "" ]] \
 	&& if [[ "${_FREEBOX_URL}" =~ ^https\:// ]]
-	then 
+	then
 	FREEBOX_WAN_URL=${_FREEBOX_URL}
 	FREEBOX_LAN_URL=${_FREEBOX_URL}
 	fi
 [[ "${_FREEBOX_CACERT}" != "" ]] \
 	&& if [[ -f "${_FREEBOX_CACERT}" ]]
-	then 
+	then
 	FREEBOX_WAN_CACERT=${_FREEBOX_CACERT}
 	FREEBOX_LAN_CACERT=${_FREEBOX_CACERT}
 	fi
@@ -304,26 +309,26 @@ $(sed '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/!d' $ILIADBOX_LA
 ${ILIADBOX_DEFAULT_CACERT}"
 
 
-# FREEBOX_URL POLICY : 
+# FREEBOX_URL POLICY :
 # $FREEBOX_WAN_URL has precedence over $FREEBOX_LAN_URL
-# $FREEBOX_LAN_URL has precedence over $FREEBOX_DEFAULT_URL 
+# $FREEBOX_LAN_URL has precedence over $FREEBOX_DEFAULT_URL
 # NB: Working the same way for ILIADBOX_URL
 
 [[ ! -n $FREEBOX_LAN_URL ]] \
 	&& FREEBOX_LAN_URL="$FREEBOX_DEFAULT_URL" \
-	|| FREEBOX_LAN_URL="$FREEBOX_LAN_URL" 
+	|| FREEBOX_LAN_URL="$FREEBOX_LAN_URL"
 
 [[ ! -n $FREEBOX_WAN_URL ]] \
 	&& FREEBOX_URL="$FREEBOX_LAN_URL" \
-	|| FREEBOX_URL="$FREEBOX_WAN_URL" 
+	|| FREEBOX_URL="$FREEBOX_WAN_URL"
 
 [[ ! -n $ILIADBOX_LAN_URL ]] \
 	&& ILIADBOX_LAN_URL="$ILIADBOX_DEFAULT_URL" \
-	|| ILIADBOX_LAN_URL="$ILIADBOX_LAN_URL" 
+	|| ILIADBOX_LAN_URL="$ILIADBOX_LAN_URL"
 
 [[ ! -n $ILIADBOX_WAN_URL ]] \
 	&& ILIADBOX_URL="$ILIADBOX_LAN_URL" \
-	|| ILIADBOX_URL="$ILIADBOX_WAN_URL" 
+	|| ILIADBOX_URL="$ILIADBOX_WAN_URL"
 
 
 # Now to avoid changing more than 1000 lines of code, we will assume that if ITALY="yes"
@@ -335,18 +340,39 @@ ${ILIADBOX_DEFAULT_CACERT}"
 
 [[ "$ITALY" == "yes" ]] \
         && BOX="ILIADBOX" \
-        || BOX="FREEBOX" 
+        || BOX="FREEBOX"
 
 
 ####### NBA DETECTING TERMINAL BACKGROUND COLOR #######
 # If terminal background is black, main fonts color would be white
 # If terminal background is white, main fonts color would be black
 detect_term_bg_color () {
-# timeout '-t 0.1' or '-t 0.01' is too short for old machines or weak CPU speed 	
-read -t 0.2 -rs -d \\ -p $'\e]11;?\e\\' BG  
-grep -q ffff/ffff/ffff <<< $(echo -e "$BG") \
-       && W='[30m' \
-       || W='[37m' 
+	# The OSC 11 query/response trick below needs a REAL interactive terminal on BOTH
+	# ends: stdin to read the terminal's answer, and stdout to send the query in the
+	# first place - checking only one of the two (as an earlier proposed fix did) is
+	# not enough, since a terminal's response can't be captured if only one side is a
+	# real tty (ex: output piped to a log file while stdin is still a terminal, or the
+	# reverse). Skip the query entirely when either side is not a tty (ex: GitLab CI,
+	# cron, any non-interactive shell) instead of attempting it anyway.
+	if [[ -t 0 && -t 1 ]]
+	then
+		# timeout '-t 0.1' or '-t 0.01' is too short for old machines or weak CPU speed
+		# "|| BG=" is required here: without it, a caller sourcing this library with
+		# 'set -e' active (common in CI job shells, including GitLab CI) would have its
+		# WHOLE SHELL killed the instant this single 'read' fails/times out with no
+		# answer - a bare failing command inside a sourced script aborts immediately
+		# under errexit, and that abort is what actually broke GitLab CI, not the
+		# missing tty check by itself
+		read -t 0.2 -rs -d \\ -p $'\e]11;?\e\\' BG || BG=""
+	else
+		# no usable terminal on one or both ends (ex: GitLab CI runner, output
+		# redirected to a file/pipe, cron) - skip the query, fall through to the
+		# default color below
+		BG=""
+	fi
+	grep -q ffff/ffff/ffff <<< $(echo -e "$BG") \
+	       && W='[30m' \
+	       || W='[37m' 
 }      
 detect_term_bg_color 2>&1 >/dev/null
 ESC="\033"
@@ -1042,6 +1068,64 @@ fi
 }
 
 
+###########################################################################################
+##
+## NBA: JSON STRING ESCAPING HELPER
+## => NEW: needed because every check_and_feed_*_param function in this library embeds
+## user-supplied values directly into a JSON string ("key":"value") with no escaping.
+## A value containing a literal '"' or '\' produces malformed JSON; a value containing
+## an embedded newline/tab is technically invalid JSON per RFC 8259 (raw control
+## characters are not allowed inside a JSON string). This must run BEFORE a value is
+## placed between the quotes in any "\"key\":\"value\"" construction below.
+##
+###########################################################################################
+
+# NBA : internal - escape a value for safe embedding as a JSON string. Order matters:
+# backslash MUST be escaped first, or the backslashes this function inserts for the
+# other characters would themselves get double-escaped.
+###########################################################################################
+##
+## NBA: FIXED-WIDTH COLUMN DISPLAY HELPERS (list_* header/row alignment)
+## => NEW: needed because a plain "\e[4m...${norm}" wrapped around an ENTIRE printf-padded
+## header line underlines the padding spaces too (most terminals don't render an
+## underline under a tab character, but DO render one under literal space characters
+## used for printf-style fixed-width padding) - each header label must be underlined
+## on its own, with the padding added afterwards, outside the underline span.
+##
+###########################################################################################
+
+# NBA : internal - print one underlined header label, padded to a fixed width with PLAIN
+# (non-underlined) trailing spaces. Used to build list_* header lines label-by-label
+# instead of wrapping the whole padded line in one underline span.
+# parameters : label width
+_hdr_field () {
+	local label="${1}"
+	local width="${2}"
+	local pad=$(( width - ${#label} ))
+	[[ $pad -lt 0 ]] && pad=0
+	printf "\e[4m${WHITE}%s${norm}%*s" "${label}" "${pad}" ""
+}
+
+# NBA : internal - pad a row number ("$i:") to a fixed width, so alignment does not
+# break once the index reaches 2 or 3 digits (10, 100, ...)
+# parameters : index
+_row_num () {
+	printf "%-6s" "${1}:"
+}
+
+
+_json_escape () {
+        local s="${1}"
+        s="${s//\\/\\\\}"
+        s="${s//\"/\\\"}"
+        s="${s//$'\n'/\\n}"
+        s="${s//$'\r'/\\r}"
+        s="${s//$'\t'/\\t}"
+        echo "${s}"
+}
+
+
+
 # NBA: Original _check_success function: too slow
 _check_success_old () {
     local value=$(get_json_value_for_key "$1" success)
@@ -1523,6 +1607,97 @@ check_if_url () {
 }
 
 
+## => NEW: extending the check_if_* family to cover DHCP option value types (RFC 2132)
+##
+## NBA: GLOBAL VALUE TYPE TEST FUNCTIONS: bool, u8, u16, u32, s32, ip_list, hexstring
+
+# testing if *val* is a boolean : 'true' or 'false'
+check_if_bool () {
+        local val="${1}"
+        [[ "${val}" == "true" || "${val}" == "false" ]] \
+        || return 1
+}
+
+# testing if *val* is an unsigned 8 bit integer : 0 to 255
+check_if_u8 () {
+        local val="${1}"
+        [[ ${val} =~ ^[[:digit:]]+$ ]] \
+        && [[ ${val} -ge 0 && ${val} -le 255 ]] \
+        || return 1
+}
+
+# testing if *val* is an unsigned 16 bit integer : 0 to 65535
+check_if_u16 () {
+        local val="${1}"
+        [[ ${val} =~ ^[[:digit:]]+$ ]] \
+        && [[ ${val} -ge 0 && ${val} -le 65535 ]] \
+        || return 1
+}
+
+# testing if *val* is an unsigned 32 bit integer : 0 to 4294967295
+check_if_u32 () {
+        local val="${1}"
+        [[ ${val} =~ ^[[:digit:]]+$ ]] \
+        && [[ ${val} -ge 0 ]] \
+        && (( val <= 4294967295 )) \
+        || return 1
+}
+
+# testing if *val* is a signed 32 bit integer : -2147483648 to 2147483647
+check_if_s32 () {
+        local val="${1}"
+        [[ ${val} =~ ^-?[[:digit:]]+$ ]] \
+        && (( val >= -2147483648 && val <= 2147483647 )) \
+        || return 1
+}
+
+# testing if *val* is a comma separated list of valid ip addresses
+# ex: "192.168.1.38, 192.168.1.42" or "192.168.1.38,192.168.1.42"
+check_if_ip_list () {
+        local list="${1}"
+        local ip=""
+        local savedIFS="$IFS"
+        IFS=','
+        for ip in ${list}
+        do
+                ip="${ip// /}"
+                check_if_ip "${ip}" || { IFS="$savedIFS"; return 1; }
+        done
+        IFS="$savedIFS"
+}
+
+# testing if *val* is an hexadecimal string (even number of hex digits)
+check_if_hexstring () {
+        local val="${1}"
+        [[ ${val} =~ ^([0-9a-fA-F]{2})+$ ]] \
+        || return 1
+}
+
+
+###########
+##
+## NBA: LAN HOST DOMAIN NAME VALIDATOR
+## => NEW: LanHost.domain_name (the per-host local domain name, ex: "freebox-player.home")
+## follows specific rules documented by the freebox API - distinct from check_if_domain
+## (used for the global freebox remote-access domain), since the rules differ (must end
+## with ".home", digits/hyphens/dots have placement restrictions, empty string allowed)
+##
+###########################################################################################
+
+# NBA : validate a LanHost domain_name value against the freebox API's documented rules:
+# must end with ".home", 63 chars max, only letters/digits/hyphens/dots, a label cannot
+# start with a digit/hyphen, cannot start or end with a dot/hyphen, no consecutive dots -
+# an empty string is explicitly valid (means "no local domain registered for this host")
+check_if_lan_domain_name () {
+       local val="${1}"
+       [[ "${val}" == "" ]] && return 0
+       [[ "${#val}" -gt 63 ]] && return 1
+       [[ "${val}" =~ ^[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.home$ ]]
+}
+
+
+
+
 ######## match debug ##########
 #[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] && echo match-mac-and="$?"
 #[[ $mac =~ ^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$ ]] || echo match-mac-or="$?"
@@ -1962,7 +2137,8 @@ list_dl_task_api () {
                  fi
 		 print_term_line 120
         ((i++))
-        done || return 1
+        done
+        return 0
 echo
 }
 
@@ -3260,7 +3436,8 @@ list_dhcp_static_lease () {
 			|| echo -e "$j:\t${PURPL}${id[$i]}${norm}\t${PURPL}${mac[$i]}${norm}\t${PURPL}${ip[$i]} ${norm} \t${PURPL}${state[$i]}${norm}  \t${BLUE}${hostname[$i]}${norm}"
 	((i++))
 	((j++))
-	done  || return 1 
+	done
+	return 0
 echo
 }	
 
@@ -3403,6 +3580,1604 @@ del_dhcp_static_lease () {
 
 
 
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "DHCP CONFIGURATION API"
+## => NEW: added to support Freebox API v16 GET/PUT /dhcp/config/ (global DHCP server
+##    settings) AND the embedded 'options[]' array (DHCP options, RFC 2132)
+##
+## NOTE ON jq: PUT /dhcp/config/ supports PARTIAL updates (confirmed by the freebox API
+## doc's own example: {"enabled": false}), so DHCP option add/upd/del only ever need to
+## send back {"options":[...]} - the rest of the config is left untouched. As with the
+## routing table above, rebuilding that options[] array is done with the library's own
+## pure-bash tokenizer (get_json_value_for_key), jq is never required.
+##
+###########################################################################################
+
+
+####### NBA ADDING FUNCTION FOR MANAGING DHCP CONFIGURATION (GLOBAL SETTINGS) API #######
+
+
+# NBA : returns the expected value-type (as defined in RFC 2132, freebox API doc
+# "DHCP Option Object" table) for a given DHCP option identifier.
+# echo one of : s32 ip_list string bool u16 u8 u32 ip hexstring unknown
+# using a case statement (NOT an associative array) to keep old-bash / no-jq
+# platforms working, per the library's compatibility policy
+_dhcp_option_type () {
+	local id="${1}"
+	case "${id}" in
+	time_offset) echo s32 ;;
+	time_server|log_server|cookie_server|lpr_server|impress_server|\
+	resource_location_server|swap_server|nis_server|ntp_server|\
+	nis_plus_server|mobile_ip_agent|smtp_server|pop3_server|nntp_server|\
+	www_server|finger_server|irc_server|streettalk_server|stda_server|\
+	slp_directory_agent|nds_servers|ldap_servers|capwap_ac|\
+	tftp_server_address) echo ip_list ;;
+	hostname|domain_name|merit_dump_file|root_path|extensions_path|nis_domain|\
+	nis_plus_domain|tftp_server_name|bootfile_name|nds_tree_name|\
+	nds_context|timezone_posix|timezone_database) echo string ;;
+	ip_fwd|ip_fwd_non_local|local_subnets|mask_discovery|mask_supplier|\
+	perform_rd|trailer_encapsulation|eth_encapsulation|\
+	tcp_keepalive_garbage) echo bool ;;
+	ip_max_reassembly_size|mtu) echo u16 ;;
+	ip_ttl|tcp_ttl) echo u8 ;;
+	ip_pmtu_timeout|arp_cache_timeout|tcp_keepalive_interval) echo u32 ;;
+	rs_address) echo ip ;;
+	vendor_specific|slp_service_scope|name_service|domain_search|\
+	classless_static_route) echo hexstring ;;
+	*) echo unknown ;;
+	esac
+}
+
+# NBA : validate a "val" against the type expected for a given DHCP option "id"
+# --> success return 0 ; error return 1 and set ${dhcpopt_type_err} with a message
+check_if_dhcp_option_value () {
+        local id="${1}"
+        local val="${2}"
+        local type=$(_dhcp_option_type "${id}")
+        dhcpopt_type_err=""
+        case "${type}" in
+        bool)     check_if_bool "${val}"     || dhcpopt_type_err="'${id}' expects a bool value: true or false" ;;
+        u8)       check_if_u8 "${val}"       || dhcpopt_type_err="'${id}' expects a u8 value: 0-255" ;;
+        u16)      check_if_u16 "${val}"      || dhcpopt_type_err="'${id}' expects a u16 value: 0-65535" ;;
+        u32)      check_if_u32 "${val}"      || dhcpopt_type_err="'${id}' expects a u32 value: 0-4294967295" ;;
+        s32)      check_if_s32 "${val}"      || dhcpopt_type_err="'${id}' expects a s32 value: -2147483648 to 2147483647" ;;
+        ip)       check_if_ip "${val}"       || dhcpopt_type_err="'${id}' expects a single ip address" ;;
+        ip_list)  check_if_ip_list "${val}"  || dhcpopt_type_err="'${id}' expects a comma separated list of ip addresses" ;;
+        hexstring) check_if_hexstring "${val}" || dhcpopt_type_err="'${id}' expects an hexadecimal string" ;;
+        string)   : ;; # any string is valid, nothing to check
+        unknown)  dhcpopt_type_err="'${id}' is not a known DHCP option identifier (see RFC 2132 / freebox API doc)" ;;
+        esac
+        [[ "${dhcpopt_type_err}" == "" ]] || return 1
+}
+
+
+# NBA : Function which will print the current DHCP server global configuration
+# This function do not take parameters
+list_dhcp_config () {
+
+	local answer=$(call_freebox_api "/dhcp/config/")
+	echo -e "\n${white}\t\t\t\tDHCP SERVER GLOBAL CONFIGURATION:${norm}\n"
+	_check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+	[[ -x "$JQ" ]] \
+	&& local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+	|| local cache_result=("$(dump_json_keys_values "${answer}")")
+	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 # debug
+
+	local enabled=$(get_json_value_for_key "${answer}" "result.enabled")
+	local sticky=$(get_json_value_for_key "${answer}" "result.sticky_assign")
+	local gateway=$(get_json_value_for_key "${answer}" "result.gateway")
+	local netmask=$(get_json_value_for_key "${answer}" "result.netmask")
+	local range_s=$(get_json_value_for_key "${answer}" "result.ip_range_start")
+	local range_e=$(get_json_value_for_key "${answer}" "result.ip_range_end")
+	local broadcast=$(get_json_value_for_key "${answer}" "result.always_broadcast")
+	local outrange=$(get_json_value_for_key "${answer}" "result.ignore_out_of_range_hint")
+	local boot_srv=$(get_json_value_for_key "${answer}" "result.boot_server")
+	local boot_file=$(get_json_value_for_key "${answer}" "result.boot_file")
+	local dns=($(echo -e "${cache_result[@]}" |egrep "result.dns\[" |cut -d' ' -f3))
+	local nboptions=$(echo -e "${cache_result[@]}" |egrep "result.options\[[0-9]*\].id" |wc -l)
+
+	# NBA : on every line that shows two "LABEL:  value" pairs side by side, the first
+	# value is padded to a fixed width with printf so the second label always starts at
+	# the same column regardless of how long that first value actually is - manually
+	# tuned tabs only happen to line up for the specific values used while testing, and
+	# silently drift for any other value length (ex: a longer boot_server hostname)
+	local l_gateway l_broadcast l_boot_srv
+	[[ "${enabled}" != 'true' ]] \
+	&& echo -e "${light_purple_sed}DHCP SERVER:\t\t${RED}disabled${norm}" \
+	|| echo -e "${light_purple_sed}DHCP SERVER:\t\t${GREEN}enabled${norm}"
+	echo -e "${light_purple_sed}STICKY ASSIGN:\t\t${WHITE}${sticky}${norm}"
+	printf -v l_gateway "%-20s  " "${gateway}"
+	echo -e "${light_purple_sed}GATEWAY:\t\t${WHITE}${l_gateway}${norm}${light_purple_sed}NETMASK:\t\t${WHITE}${netmask}${norm}"
+	echo -e "${light_purple_sed}IP RANGE:\t\t${WHITE}${range_s} - ${range_e}${norm}"
+	printf -v l_broadcast "%-20s  " "${broadcast}"
+	echo -e "${light_purple_sed}ALWAYS BROADCAST:\t${WHITE}${l_broadcast}${norm}${light_purple_sed}IGNORE OUT OF RANGE:\t${WHITE}${outrange}${norm}"
+	printf -v l_boot_srv "%-20s  " "${boot_srv}"
+	echo -e "${light_purple_sed}BOOT SERVER:\t\t${WHITE}${l_boot_srv}${norm}${light_purple_sed}BOOT FILE:\t\t${WHITE}${boot_file}${norm}"
+	echo -e "${light_purple_sed}DNS SERVERS:\t\t${WHITE}${dns[@]}${norm}"
+	echo -e "${light_purple_sed}DHCP OPTIONS SET:\t${WHITE}${nboptions}${norm}\t\t(run ${BLUE}list_dhcp_options${WHITE} for details)${norm}"
+echo
+}
+
+dhcp_config_list () {
+auto_relogin && list_dhcp_config
+}
+
+
+# NBA : Function which will print help on error for DHCP CONFIG function : upd_dhcp_config
+param_dhcp_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_dhcp_config" \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_dhcp_config" \
+        || local listfunct=${list_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|enabled=\t\t\t# boolean 'true' or 'false': enable/disable the DHCP server|sticky_assign=\t\t\t# boolean 'true' or 'false': always assign same ip to a given host|ip_range_start=\t\t\t# DHCP range start ip|ip_range_end=\t\t\t# DHCP range end ip|always_broadcast=\t\t# boolean 'true' or 'false'|ignore_out_of_range_hint=\t# boolean 'true' or 'false'|boot_server=\t\t\t# TFTP server address used when booting via TFTP|boot_file=\t\t\t# boot file to download from the TFTP server${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this updates the freebox DHCP server global configuration, only send the parameter(s) you want to change (partial update)${norm}\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see the current configuration${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} ip_range_start=\"192.168.1.10\" ip_range_end=\"192.168.1.100\"${norm}\n" \
+&& echo -e "EXAMPLE (disable DHCP server):\n${BLUE}${progfunct} enabled=\"false\"${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+
+
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'dhcp_config_object' object (partial - only fields the user supplied)
+check_and_feed_dhcp_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local boolfields="enabled sticky_assign always_broadcast ignore_out_of_range_hint"
+        error=0
+        dhcp_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_dhcp_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "sticky_assign" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "ip_range_start" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "ip_range_end" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "always_broadcast" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "ignore_out_of_range_hint" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "boot_server" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "boot_file" ]] \
+                && param_dhcp_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                # testing ip_range_start / ip_range_end are valid ip addresses
+                [[ "${nameparam[$idparam]}" == "ip_range_start" || "${nameparam[$idparam]}" == "ip_range_end" ]] \
+                        && ! check_if_ip ${valueparam[$idparam]} \
+                        && upddhcpconfig="${nameparam[$idparam]} must be a valid ip address" \
+                        && param_dhcp_config_err
+                # testing boolean fields
+                echo "${boolfields}" |grep -qw "${nameparam[$idparam]}" \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && upddhcpconfig="${nameparam[$idparam]} must be a boolean: true or false" \
+                        && param_dhcp_config_err
+        ((idparam++))
+        done
+
+        # building 'dhcp_config_object' json object : boolean fields are unquoted
+        [[ "${error}" != "1" ]] \
+                && dhcp_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "${boolfields}" |grep -qw "${nameparam[$idnameparam]}" \
+                                && echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+                                || echo "\"${nameparam[$idnameparam]}\":\"$(_json_escape "${valueparam[$idnameparam]}")\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo dhcp_config_object=${dhcp_config_object} >&2 # debug
+}
+
+
+# NBA : Function which will update the DHCP server global configuration (partial update)
+# parameters : any of enabled=/sticky_assign=/ip_range_start=/ip_range_end=/
+#              always_broadcast=/ignore_out_of_range_hint=/boot_server=/boot_file=
+upd_dhcp_config () {
+        local upddhcpconfig=""
+        error=0
+        check_and_feed_dhcp_config_param "${@}" \
+        && upddhcpconfig=$(update_freebox_api /dhcp/config/ "${dhcp_config_object}")
+        colorize_output "${upddhcpconfig}"
+}
+
+
+####### NBA ADDING FUNCTION FOR MANAGING DHCP OPTIONS (RFC 2132) API #######
+
+# NBA : internal function which parses the current 'options[]' array into indexed
+# bash arrays using get_json_value_for_key (pure bash tokenizer, no jq needed).
+# --> fills global arrays: _OPT_ID[] _OPT_VAL[]
+# --> success return 0 ; error return 1
+_parse_dhcp_options () {
+        local answer=$(get_freebox_api /dhcp/config/)
+        _check_success "${answer}" || return 1
+        _OPT_ID=() ; _OPT_VAL=()
+        local i=0
+        dump_json_keys_values "${answer}" >/dev/null   # cache once for get_json_value_for_key
+        while [[ $(get_json_value_for_key "${answer}" "result.options[$i].id") != "" ]]
+        do
+                _OPT_ID[$i]=$(get_json_value_for_key "${answer}" "result.options[$i].id")
+                _OPT_VAL[$i]=$(get_json_value_for_key "${answer}" "result.options[$i].val")
+        ((i++))
+        done
+        return 0   # NOTE: see the matching comment in _parse_lan_routes - without this,
+                   # exactly ONE configured DHCP option would make this function (and
+                   # every caller that checks its return code) spuriously report failure
+}
+
+# NBA : internal function which rebuilds a full 'options[]' json array from the
+# _OPT_ID[] / _OPT_VAL[] bash arrays (skips an entry whose _OPT_ID[$i] has been
+# blanked out, e.g by del_dhcp_option)
+_build_dhcp_options_json () {
+        local n=${#_OPT_ID[@]}
+        local i=0
+        local out=""
+        while [[ $i -lt $n ]]
+        do
+                [[ "${_OPT_ID[$i]}" != "" ]] \
+                && out="${out}{\"id\":\"$(_json_escape "${_OPT_ID[$i]}")\",\"val\":\"$(_json_escape "${_OPT_VAL[$i]}")\"},"
+        ((i++))
+        done
+        echo "[${out%,}]"
+}
+
+
+# NBA : Function which will list all configured DHCP options (config.options[])
+# This function do not take parameters
+list_dhcp_options () {
+	_parse_dhcp_options || { echo -e "${RED}unable to fetch DHCP configuration${norm}" >&2; return 1; }
+	echo -e "\n${white}\t\t\t\tDHCP OPTIONS (RFC 2132):${norm}\n"
+	echo -e "$(_hdr_field '#:' 6)$(_hdr_field 'id:' 28)$(_hdr_field 'value:' 0)"
+	local i=0
+	while [[ "${_OPT_ID[$i]}" != "" ]]
+	do
+		local padded_id
+		printf -v padded_id "%-26s  " "${_OPT_ID[$i]}"
+		echo -e "$(_row_num $i)${GREEN}${padded_id}${norm}${WHITE}${_OPT_VAL[$i]}${norm}"
+	((i++))
+	done
+echo
+}
+
+dhcp_options_list () {
+auto_relogin && list_dhcp_options
+}
+
+
+# NBA : Function which will print help on error for DHCP OPTION functions :
+# - add_dhcp_option
+# - upd_dhcp_option
+# - del_dhcp_option
+# ${action} parameter must be set by function which calling 'param_dhcp_option_err'
+param_dhcp_option_err () {
+error=1
+
+        [[ "${action}" == "add" \
+        || "${action}" == "upd" \
+        || "${action}" == "del" ]] \
+        && local funct="${action}_dhcp_option"
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct=${funct} \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_dhcp_options" \
+        || local listfunct=${list_cmd}
+
+# add_dhcp_option / upd_dhcp_option param error (same syntax: id is the option identifier)
+[[ "${action}" == "add" || "${action}" == "upd" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id=\t\t\t# DHCP option identifier as defined in RFC 2132, ex: ntp_server, log_server, tcp_ttl, ...|val=\t\t\t# value for this option - type depends on 'id' (bool, u8, u16, u32, s32, ip, ip_list, hexstring or string)${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}see the 'DHCP Option Object' section of the freebox API documentation for the full list of valid 'id' identifiers and their expected type${norm}\n" \
+&& if [[ "${dhcpopt_type_err}" != "" ]]; then echo -e "ERROR: ${RED}${dhcpopt_type_err}${norm}\n"; fi \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see currently configured options${norm}\n" \
+&& echo -e "EXAMPLE (ip_list):\n${BLUE}${progfunct} id=\"ntp_server\" val=\"192.168.1.38, 192.168.1.42\"${norm}\n" \
+&& echo -e "EXAMPLE (bool):\n${BLUE}${progfunct} id=\"ip_fwd\" val=\"true\"${norm}\n" \
+&& echo -e "EXAMPLE (u8):\n${BLUE}${progfunct} id=\"tcp_ttl\" val=\"64\"${norm}\n"
+
+# del_dhcp_option param error
+[[ "${action}" == "del" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id\t\t\t# DHCP option identifier to remove, ex: ntp_server${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see currently configured options${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} ntp_server${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'dhcp_option_object' : {"id":"...","val":"..."}
+# --> validates 'val' against the type expected for 'id' (see check_if_dhcp_option_value
+#     / _dhcp_option_type, RFC 2132 table)
+check_and_feed_dhcp_option_param () {
+        local param=("${@}")
+        local id=""
+        local val=""
+        local idparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        error=0
+        dhcp_option_object=("")
+        dhcpopt_type_err=""
+
+        [[ "$numparam" -lt "2" ]] && param_dhcp_option_err
+        [[ "$numparam" -ge "2" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "id" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "val" ]] \
+                && param_dhcp_option_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "id" ]] && id=${valueparam[$idparam]}
+                [[ "${nameparam[$idparam]}" == "val" ]] && val=${valueparam[$idparam]}
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" && "${id}" == "" ]] && param_dhcp_option_err
+        [[ "${error}" != "1" && "${action}" != "del" && "${val}" == "" ]] && param_dhcp_option_err
+
+        # validate 'val' against the RFC 2132 type expected for 'id'
+        [[ "${error}" != "1" && "${action}" != "del" ]] \
+                && ! check_if_dhcp_option_value "${id}" "${val}" \
+                && param_dhcp_option_err
+
+        optid="${id}"
+        [[ "${error}" != "1" ]] \
+        && dhcp_option_object="{\"id\":\"$(_json_escape "${id}")\",\"val\":\"$(_json_escape "${val}")\"}"
+        [[ "${debug}" == "1" ]] && echo dhcp_option_object=${dhcp_option_object} >&2 # debug
+}
+
+
+# NBA : Function which will add a new DHCP option (fails if 'id' already exists,
+# use upd_dhcp_option to change an existing option's value)
+# parameters : - id=    (mandatory - RFC 2132 option identifier, ex: ntp_server)
+#              - val=   (mandatory - value for this option, type depends on id)
+add_dhcp_option () {
+        local adddhcpoption=""
+        local i=0 exists=0
+        action=add
+        error=0
+        check_and_feed_dhcp_option_param "${@}"
+        if [[ "$error" != "1" ]]
+        then
+                _parse_dhcp_options || { colorize_output '{"success":false,"msg":"unable to fetch DHCP configuration","error_code":"internal_error"}'; unset action; return 1; }
+                while [[ $i -lt ${#_OPT_ID[@]} ]]
+                do
+                        [[ "${_OPT_ID[$i]}" == "${optid}" ]] && exists=1
+                ((i++))
+                done
+                if [[ "${exists}" -eq "1" ]]
+                then
+                        adddhcpoption='{"success":false,"msg":"option id already exists, use upd_dhcp_option instead","error_code":"exist"}'
+                else
+                        _OPT_ID[${#_OPT_ID[@]}]="${optid}"
+                        _OPT_VAL[$((${#_OPT_VAL[@]}))]=$(echo "${dhcp_option_object}" |sed -n 's/.*"val":"\(.*\)"}/\1/p')
+                        adddhcpoption=$(update_freebox_api /dhcp/config/ "{\"options\":$(_build_dhcp_options_json)}")
+                fi
+        fi
+        colorize_output "${adddhcpoption}"
+        unset action
+}
+
+
+# NBA : Function which will update the value of an existing DHCP option (matched by 'id')
+# parameters : - id=    (mandatory)
+#              - val=   (mandatory - new value for this option, type depends on id)
+upd_dhcp_option () {
+        local upddhcpoption=""
+        local i=0 found=0
+        action=upd
+        error=0
+        check_and_feed_dhcp_option_param "${@}"
+        if [[ "$error" != "1" ]]
+        then
+                _parse_dhcp_options || { colorize_output '{"success":false,"msg":"unable to fetch DHCP configuration","error_code":"internal_error"}'; unset action; return 1; }
+                while [[ $i -lt ${#_OPT_ID[@]} ]]
+                do
+                        [[ "${_OPT_ID[$i]}" == "${optid}" ]] \
+                                && found=1 \
+                                && _OPT_VAL[$i]=$(echo "${dhcp_option_object}" |sed -n 's/.*"val":"\(.*\)"}/\1/p')
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        upddhcpoption='{"success":false,"msg":"no such DHCP option id, use add_dhcp_option instead","error_code":"noent"}'
+                else
+                        upddhcpoption=$(update_freebox_api /dhcp/config/ "{\"options\":$(_build_dhcp_options_json)}")
+                fi
+        fi
+        colorize_output "${upddhcpoption}"
+        unset action
+}
+
+
+# NBA : Function which will delete an existing DHCP option (matched by 'id')
+# parameters : - id     (mandatory - RFC 2132 option identifier, ex: ntp_server)
+del_dhcp_option () {
+        local id=${1}
+        local deldhcpoption=""
+        local i=0 found=0
+        action=del
+        error=0
+        [[ "${id}" == "" ]] && param_dhcp_option_err
+        if [[ "${error}" != "1" ]]
+        then
+                _parse_dhcp_options || { colorize_output '{"success":false,"msg":"unable to fetch DHCP configuration","error_code":"internal_error"}'; unset action; return 1; }
+                while [[ $i -lt ${#_OPT_ID[@]} ]]
+                do
+                        [[ "${_OPT_ID[$i]}" == "${id}" ]] && found=1 && _OPT_ID[$i]=""
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        deldhcpoption='{"success":false,"msg":"no such DHCP option id","error_code":"noent"}'
+                else
+                        deldhcpoption=$(update_freebox_api /dhcp/config/ "{\"options\":$(_build_dhcp_options_json)}")
+                fi
+        fi
+        colorize_output "${deldhcpoption}"
+        unset action
+}
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for COMPUTING TRICKY DHCP OPTION VALUES
+## => NEW: some DHCP options (the 'hexstring' type ones in particular) are NOT
+## human-friendly to compute by hand:
+##   - domain_search (opt 119, RFC 3397) uses DNS-style label encoding with
+##     suffix compression (pointers back to an earlier occurrence of the same suffix)
+##   - classless_static_route (opt 121, RFC 3442) packs a variable-length list of
+##     routes (mask width + only the "significant" prefix octets + 4-byte gateway)
+## These functions let the user type plain domain names / CIDR+gateway pairs and get
+## back the exact 'val=' hex string to feed straight into add_dhcp_option /
+## upd_dhcp_option, following the SAME param_***_err / check_and_feed_*** mechanism,
+## error reporting and EXAMPLE style as the rest of this library. Pure bash, no jq,
+## no external tool (uses printf's "'c" ordinal idiom to convert ASCII to hex, and
+## printf "%02x" for byte formatting - both POSIX printf features, so this stays
+## portable to the same old-unix targets as the rest of the library).
+##
+###########################################################################################
+
+
+####### NBA ADDING FUNCTION FOR COMPUTING DHCP OPTION 119 (RFC 3397 domain_search) #######
+
+# NBA : internal - convert an ASCII string to its hex representation (2 hex digits per
+# char). Uses printf '%02x' "'c" (POSIX: a leading quote/apostrophe makes printf use the
+# ordinal value of the following character) - pure bash builtin, no xxd/od needed.
+_ascii_to_hex () {
+        local str="${1}"
+        local i=0
+        local hex=""
+        while [[ $i -lt ${#str} ]]
+        do
+                hex="${hex}$(printf '%02x' "'${str:$i:1}")"
+        ((i++))
+        done
+        echo "${hex}"
+}
+
+
+# NBA : Function which will print help on error for compute_dhcp119_string
+# ${dhcp119err} , when set by check_and_feed_dhcp119_param, gives the specific reason
+param_dhcp119_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="compute_dhcp119_string" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}\"${progfunct}\" takes one or more domain names as positional parameters:${norm}${BLUE}|domain1 [domain2] [domain3] ...${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this computes the RFC 3397 (DNS style, suffix-compressed) hex string expected as 'val=' for the 'domain_search' DHCP option (opt 119)${norm}\n" \
+&& echo -e "NOTE: ${RED}feed the result straight into add_dhcp_option, ex:${norm}\n${BLUE}add_dhcp_option id=\"domain_search\" val=\"\$(${progfunct} 14rv.lan storage.lan)\"${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 14rv.lan storage.lan oob.lan lab.lan fbx.lan${norm}\n"
+[[ "${dhcp119err}" != "" ]] && echo -e "ERROR: ${RED}${dhcp119err}${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+
+# NBA : This function validates each positional domain name parameter, reusing the
+# library's existing check_if_domain validator
+# --> sets non-local 'dhcp119_domains[]' array (only the validated domains)
+check_and_feed_dhcp119_param () {
+        local param=("${@}")
+        local numparam="$#"
+        local i=0
+        error=0
+        dhcp119err=""
+        dhcp119_domains=()
+
+        [[ "$numparam" -lt "1" ]] && param_dhcp119_err
+        while [[ $i -lt $numparam && "${error}" != "1" ]]
+        do
+                ! check_if_domain "${param[$i]}" \
+                        && dhcp119err="'${param[$i]}' is not a valid domain name" \
+                        && param_dhcp119_err
+                [[ "${error}" != "1" ]] && dhcp119_domains+=("${param[$i]}")
+        ((i++))
+        done
+        [[ "${error}" == "1" ]] && return 1
+        return 0
+}
+
+
+# NBA : Function which will compute the RFC 3397 domain_search (DHCP option 119) hex
+# string from one or more plain domain names, applying DNS-style suffix compression
+# (a 2-byte pointer back to the FIRST earlier occurrence of the same trailing suffix,
+# offset counted from the start of this option's own data - NOT the whole DHCP packet)
+# exactly like a real DHCP server encodes it.
+# parameters : domain1 [domain2] [domain3] ...
+# --> success : prints the computed hex string on stdout, return 0
+# --> error   : prints usage/help on stderr (via param_dhcp119_err), return 1
+compute_dhcp119_string () {
+        check_and_feed_dhcp119_param "${@}"
+        [[ "${error}" == "1" ]] && return 1
+
+        local suf_list=() suf_offset=()
+        local out=""
+        local d labels label suffix matched i j found ptr nl
+
+        for d in "${dhcp119_domains[@]}"
+        do
+                IFS='.' read -ra labels <<< "${d}"
+                nl=${#labels[@]}
+                i=0 ; matched=0
+                while [[ $i -lt $nl ]]
+                do
+                        # suffix = labels[i..end] re-joined with '.' (ex: for i=1 on "storage.lan" -> "lan")
+                        suffix=$(IFS=. ; echo "${labels[*]:$i}")
+                        j=0 ; found=-1
+                        while [[ $j -lt ${#suf_list[@]} ]]
+                        do
+                                [[ "${suf_list[$j]}" == "${suffix}" ]] && found=$j && break
+                        ((j++))
+                        done
+                        if [[ $found -ge 0 ]]
+                        then
+                                # this suffix was already emitted earlier -> replace with a pointer
+                                ptr=${suf_offset[$found]}
+                                out="${out}$(printf '%02x%02x' $((0xC0 | (ptr >> 8))) $((ptr & 0xFF)))"
+                                matched=1
+                                break
+                        else
+                                # new suffix : record its offset (current byte length of 'out'), then
+                                # write this single label as length-byte + ascii bytes, and keep
+                                # walking right (dropping the leftmost label) to try compress the rest
+                                suf_list+=("${suffix}")
+                                suf_offset+=($((${#out}/2)))
+                                label="${labels[$i]}"
+                                out="${out}$(printf '%02x' ${#label})$(_ascii_to_hex "${label}")"
+                        fi
+                ((i++))
+                done
+                # no suffix of this domain matched anything seen before -> terminate with 0x00
+                [[ "${matched}" -eq 0 ]] && out="${out}00"
+        done
+        echo "${out}"
+}
+
+
+####### NBA ADDING FUNCTION FOR COMPUTING DHCP OPTION 121 (RFC 3442 classless_static_route) #######
+
+# NBA : internal - dotted-decimal ip address <-> 32bit integer, pure bash arithmetic
+# (used to validate that a 'prefix/masklen' the user supplies has no host bits set,
+# and to compute the correct network address to suggest when it does)
+_ip_to_int () {
+        local ip="${1}"
+        local o1 o2 o3 o4
+        IFS='.' read -r o1 o2 o3 o4 <<< "${ip}"
+        echo $(( (o1<<24) + (o2<<16) + (o3<<8) + o4 ))
+}
+
+_int_to_ip () {
+        local n="${1}"
+        echo "$(( (n>>24)&255 )).$(( (n>>16)&255 )).$(( (n>>8)&255 )).$(( n&255 ))"
+}
+
+# NBA : internal - apply a /masklen netmask to an ip address, returning the resulting
+# network address (host bits zeroed out)
+_apply_netmask () {
+        local ip="${1}" masklen="${2}"
+        local ipint=$(_ip_to_int "${ip}")
+        local maskint
+        [[ "${masklen}" -eq 0 ]] \
+                && maskint=0 \
+                || maskint=$(( (0xFFFFFFFF << (32-masklen)) & 0xFFFFFFFF ))
+        _int_to_ip $(( ipint & maskint ))
+}
+
+# NBA : Function which will print help on error for compute_dhcp121_string
+# ${dhcp121err} , when set by check_and_feed_dhcp121_param, gives the specific reason
+param_dhcp121_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="compute_dhcp121_string" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}\"${progfunct}\" takes one or more routes as positional parameters:${norm}${BLUE}|prefix/masklen=gateway [prefix/masklen=gateway] ...${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this computes the RFC 3442 packed binary hex string expected as 'val=' for the 'classless_static_route' DHCP option (opt 121)${norm}\n" \
+&& echo -e "NOTE: ${RED}'prefix' must be a properly masked network address (ex: 10.17.0.0/16, NOT 10.17.5.0/16) - a prefix with host bits set is REJECTED, with the correct network address suggested${norm}\n" \
+&& if [[ "${dhcp121err}" != "" ]]; then echo -e "ERROR: ${RED}${dhcp121err}${norm}\n"; fi \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 10.0.0.0/8=10.0.0.1 10.17.0.0/16=10.17.0.1 0.0.0.0/0=10.17.0.1${norm}\n" \
+&& echo -e "NOTE: ${RED}feed the result straight into add_dhcp_option, ex:${norm}\n${BLUE}add_dhcp_option id=\"classless_static_route\" val=\"\$(${progfunct} 10.0.0.0/8=10.0.0.1)\"${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+
+
+# NBA : This function validates each 'prefix/masklen=gateway' positional parameter
+# (network via check_if_ip, masklen 0-32, gateway via check_if_ip)
+# --> sets non-local 'dhcp121_prefix[]' 'dhcp121_mask[]' 'dhcp121_gw[]' arrays
+check_and_feed_dhcp121_param () {
+        local param=("${@}")
+        local numparam="$#"
+        local i=0
+        local net mask gw route
+        error=0
+        dhcp121err=""
+        dhcp121_prefix=() ; dhcp121_mask=() ; dhcp121_gw=()
+
+        [[ "$numparam" -lt "1" ]] && param_dhcp121_err
+        while [[ $i -lt $numparam && "${error}" != "1" ]]
+        do
+                route="${param[$i]}"
+                net=$(echo "${route}" |cut -d= -f1 |cut -d/ -f1)
+                mask=$(echo "${route}" |cut -d= -f1 |cut -d/ -f2)
+                gw=$(echo "${route}" |cut -d= -f2-)
+
+                ! check_if_ip "${net}" \
+                        && dhcp121err="'${net}' is not a valid network address" \
+                        && param_dhcp121_err
+                [[ "${error}" != "1" ]] \
+                        && ! [[ "${mask}" =~ ^[0-9]{1,2}$ ]] \
+                        && dhcp121err="'${mask}' is not a valid mask length" \
+                        && param_dhcp121_err
+                [[ "${error}" != "1" ]] \
+                        && [[ "${mask}" -gt 32 ]] \
+                        && dhcp121err="mask length must be in [0-32]" \
+                        && param_dhcp121_err
+                [[ "${error}" != "1" ]] \
+                        && ! check_if_ip "${gw}" \
+                        && dhcp121err="'${gw}' is not a valid gateway ip address" \
+                        && param_dhcp121_err
+
+                # reject a prefix with host bits set (ex: 10.17.5.0/16) instead of silently
+                # encoding it wrong - tell the user exactly which network address to use
+                if [[ "${error}" != "1" ]]
+                then
+                        local canonical=$(_apply_netmask "${net}" "${mask}")
+                        [[ "${canonical}" != "${net}" ]] \
+                                && dhcp121err="'${net}/${mask}' has host bits set - did you mean '${canonical}/${mask}' ?" \
+                                && param_dhcp121_err
+                fi
+
+                if [[ "${error}" != "1" ]]
+                then
+                        dhcp121_prefix+=("${net}")
+                        dhcp121_mask+=("${mask}")
+                        dhcp121_gw+=("${gw}")
+                fi
+        ((i++))
+        done
+        [[ "${error}" == "1" ]] && return 1
+        return 0
+}
+
+
+# NBA : Function which will compute the RFC 3442 classless_static_route (DHCP option 121)
+# hex string from one or more human-readable "prefix/masklen=gateway" routes.
+# For each route the encoding is : mask-width byte + only the "significant" prefix
+# octets (ceil(masklen/8) of them, ex: /16 -> 2 octets, /0 -> 0 octets) + the 4 gateway
+# octets - routes are simply concatenated one after another (length is implicit from
+# the DHCP option's own length field, no separator/terminator).
+# parameters : prefix/masklen=gateway [prefix/masklen=gateway] ...
+# --> success : prints the computed hex string on stdout, return 0
+# --> error   : prints usage/help on stderr (via param_dhcp121_err), return 1
+compute_dhcp121_string () {
+        check_and_feed_dhcp121_param "${@}"
+        [[ "${error}" == "1" ]] && return 1
+
+        local out=""
+        local i=0 n=${#dhcp121_prefix[@]}
+        local mask net octets o1 o2 o3 o4
+
+        while [[ $i -lt $n ]]
+        do
+                mask=${dhcp121_mask[$i]}
+                net=${dhcp121_prefix[$i]}
+                IFS='.' read -r o1 o2 o3 o4 <<< "${net}"
+                octets=$(( (mask + 7) / 8 ))
+                out="${out}$(printf '%02x' ${mask})"
+                [[ ${octets} -ge 1 ]] && out="${out}$(printf '%02x' ${o1})"
+                [[ ${octets} -ge 2 ]] && out="${out}$(printf '%02x' ${o2})"
+                [[ ${octets} -ge 3 ]] && out="${out}$(printf '%02x' ${o3})"
+                [[ ${octets} -ge 4 ]] && out="${out}$(printf '%02x' ${o4})"
+                IFS='.' read -r o1 o2 o3 o4 <<< "${dhcp121_gw[$i]}"
+                out="${out}$(printf '%02x%02x%02x%02x' ${o1} ${o2} ${o3} ${o4})"
+        ((i++))
+        done
+        echo "${out}"
+}
+
+
+
+
+
+
+
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "FTP SERVER CONFIGURATION"
+## => NEW: GET/PUT /ftp/config/
+##
+###########################################################################################
+
+# NBA : Function which will print the current FTP server configuration
+list_ftp_config () {
+	local answer=$(call_freebox_api "/ftp/config/")
+	echo -e "\n${white}\t\t\t\tFTP SERVER CONFIGURATION:${norm}\n"
+	_check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+
+	local enabled=$(get_json_value_for_key "${answer}" "result.enabled")
+	local anon=$(get_json_value_for_key "${answer}" "result.allow_anonymous")
+	local anonw=$(get_json_value_for_key "${answer}" "result.allow_anonymous_write")
+	local remote=$(get_json_value_for_key "${answer}" "result.allow_remote_access")
+	local weak=$(get_json_value_for_key "${answer}" "result.weak_password")
+	local pctrl=$(get_json_value_for_key "${answer}" "result.port_ctrl")
+	local pdata=$(get_json_value_for_key "${answer}" "result.port_data")
+	local rdomain=$(get_json_value_for_key "${answer}" "result.remote_domain")
+	local username=$(get_json_value_for_key "${answer}" "result.username")
+
+	[[ "${enabled}" != 'true' ]] \
+	&& echo -e "${light_purple_sed}FTP SERVER:\t\t${RED}disabled${norm}" \
+	|| echo -e "${light_purple_sed}FTP SERVER:\t\t${GREEN}enabled${norm}"
+	echo -e "${light_purple_sed}USERNAME:\t\t${WHITE}${username}${norm} (read-only)"
+	echo -e "${light_purple_sed}ANONYMOUS LOGIN:\t${WHITE}${anon}${norm}\t\t\t${light_purple_sed}ANONYMOUS WRITE:${WHITE}\t${anonw}${norm}"
+	echo -e "${light_purple_sed}REMOTE ACCESS:\t\t${WHITE}${remote}${norm}\t\t\t${light_purple_sed}WEAK PASSWORD:${WHITE}\t\t${weak}${norm}"
+	[[ "${weak}" == 'true' ]] \
+	&& echo -e "${RED}NOTE: password is currently weak - remote access stays disabled until you set a stronger password${norm}"
+	echo -e "${light_purple_sed}CONTROL PORT:\t\t${WHITE}${pctrl}${norm}\t\t\t${light_purple_sed}DATA PORT:\t${WHITE}${pdata}${norm}"
+	echo -e "${light_purple_sed}REMOTE DOMAIN:\t\t${WHITE}${rdomain}${norm}"
+echo
+}
+
+ftp_config_list () {
+auto_relogin && list_ftp_config
+}
+
+# NBA : Function which will print help on error for upd_ftp_config
+param_ftp_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_ftp_config" \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_ftp_config" \
+        || local listfunct=${list_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|enabled=\t\t\t# boolean 'true' or 'false': enable/disable the FTP server|allow_anonymous=\t\t# boolean: allow anonymous login|allow_anonymous_write=\t\t# boolean: allow anonymous users to write|allow_remote_access=\t\t# boolean: allow FTP access from internet (requires a strong password)|password=\t\t\t# string: change the FTP account password|port_ctrl=\t\t\t# int [1-65535]: control port for remote access|port_data=\t\t\t# int [1-65535]: data port for remote access|remote_domain=\t\t\t# string: domain name to use for remote access${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this updates the FTP server configuration, only send the parameter(s) you want to change (partial update)${norm}\n" \
+&& echo -e "NOTE: ${RED}the FTP username cannot be changed (it is your freebox account name) - please run \"${listfunct}\" to see the current configuration${norm}\n" \
+&& echo -e "NOTE: ${RED}allow_remote_access requires a strong enough password: it will silently stay disabled otherwise${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} enabled=\"true\" allow_anonymous=\"false\"${norm}\n" \
+&& echo -e "EXAMPLE (remote access):\n${BLUE}${progfunct} allow_remote_access=\"true\" password=\"S0m3StrongP@ssw0rd!\" remote_domain=\"myfbx.freeboxos.fr\"${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+
+
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'ftp_config_object' object (partial - only fields the user supplied)
+check_and_feed_ftp_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local boolfields="enabled allow_anonymous allow_anonymous_write allow_remote_access"
+        error=0
+        ftp_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_ftp_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "allow_anonymous" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "allow_anonymous_write" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "allow_remote_access" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "password" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "port_ctrl" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "port_data" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "remote_domain" ]] \
+                && param_ftp_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "port_ctrl" || "${nameparam[$idparam]}" == "port_data" ]] \
+                        && ! check_if_port "${valueparam[$idparam]}" \
+                        && updftpconfig="${nameparam[$idparam]} must be a number in [1-65535]" \
+                        && param_ftp_config_err
+                echo "${boolfields}" |grep -qw "${nameparam[$idparam]}" \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && updftpconfig="${nameparam[$idparam]} must be a boolean: true or false" \
+                        && param_ftp_config_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && ftp_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "${boolfields}" |grep -qw "${nameparam[$idnameparam]}" \
+                                && echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+                                || echo "\"${nameparam[$idnameparam]}\":\"$(_json_escape "${valueparam[$idnameparam]}")\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo ftp_config_object=${ftp_config_object} >&2 # debug
+}
+
+# NBA : Function which will update the FTP server configuration (partial update)
+upd_ftp_config () {
+        local updftpconfig=""
+        error=0
+        check_and_feed_ftp_config_param "${@}" \
+        && updftpconfig=$(update_freebox_api /ftp/config/ "${ftp_config_object}")
+        colorize_output "${updftpconfig}"
+}
+
+
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "SAMBA (SMB) CONFIGURATION"
+## => NEW: GET/PUT /netshare/samba/
+##
+###########################################################################################
+
+# NBA : Function which will print the current Samba (Windows file/printer sharing) configuration
+list_smb_config () {
+        local answer=$(call_freebox_api "/netshare/samba/")
+        echo -e "\n${white}\t\t\t\tSAMBA (SMB) CONFIGURATION:${norm}\n"
+        _check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+
+        local fshare=$(get_json_value_for_key "${answer}" "result.file_share_enabled")
+        local pshare=$(get_json_value_for_key "${answer}" "result.print_share_enabled")
+        local logon=$(get_json_value_for_key "${answer}" "result.logon_enabled")
+        local user=$(get_json_value_for_key "${answer}" "result.logon_user")
+        local wg=$(get_json_value_for_key "${answer}" "result.workgroup")
+        local v2=$(get_json_value_for_key "${answer}" "result.smbv2_enabled")
+
+        echo -e "${light_purple_sed}FILE SHARING:\t\t${WHITE}${fshare}${norm}\t\t${light_purple_sed}PRINTER SHARING:${WHITE}\t${pshare}${norm}"
+        echo -e "${light_purple_sed}LOGIN REQUIRED:\t\t${WHITE}${logon}${norm}\t\t${light_purple_sed}LOGIN USER:${WHITE}\t\t${user}${norm}"
+        echo -e "${light_purple_sed}WORKGROUP:\t\t${WHITE}${wg}${norm}\t\t${light_purple_sed}SMBv2/v3:${WHITE}\t\t${v2}${norm}"
+echo
+}
+
+smb_config_list () {
+auto_relogin && list_smb_config
+}
+
+# NBA : Function which will print help on error for upd_smb_config
+param_smb_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_smb_config" \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_smb_config" \
+        || local listfunct=${list_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|file_share_enabled=\t\t# boolean 'true'/'false': enable/disable file sharing|print_share_enabled=\t\t# boolean: enable/disable printer sharing|logon_enabled=\t\t\t# boolean: require login/password to access shares|logon_user=\t\t\t# string: samba user name|logon_password=\t\t\t# string: samba user password|workgroup=\t\t\t# string: windows workgroup name|smbv2_enabled=\t\t\t# boolean: enable SMBv2/v3 (recommended, SMBv1 is legacy/insecure)${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this updates the samba configuration, only send the parameter(s) you want to change (partial update)${norm}\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see the current configuration${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} file_share_enabled=\"true\" smbv2_enabled=\"true\"${norm}\n" \
+&& echo -e "EXAMPLE (require login):\n${BLUE}${progfunct} logon_enabled=\"true\" logon_user=\"myuser\" logon_password=\"S0m3P@ssw0rd\"${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'smb_config_object' object (partial - only fields the user supplied)
+check_and_feed_smb_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local boolfields="file_share_enabled print_share_enabled logon_enabled smbv2_enabled"
+        error=0
+        smb_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_smb_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "file_share_enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "print_share_enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "logon_enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "logon_user" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "logon_password" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "workgroup" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "smbv2_enabled" ]] \
+                && param_smb_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                echo "${boolfields}" |grep -qw "${nameparam[$idparam]}" \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && updsmbconfig="${nameparam[$idparam]} must be a boolean: true or false" \
+                        && param_smb_config_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && smb_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "${boolfields}" |grep -qw "${nameparam[$idnameparam]}" \
+                                && echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+                                || echo "\"${nameparam[$idnameparam]}\":\"$(_json_escape "${valueparam[$idnameparam]}")\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo smb_config_object=${smb_config_object} >&2 # debug
+}
+
+# NBA : Function which will update the Samba configuration (partial update)
+upd_smb_config () {
+        local updsmbconfig=""
+        error=0
+        check_and_feed_smb_config_param "${@}" \
+        && updsmbconfig=$(update_freebox_api /netshare/samba/ "${smb_config_object}")
+        colorize_output "${updsmbconfig}"
+}
+
+
+
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "AFP (APPLE FILE SHARING)"
+## => NEW: GET/PUT /netshare/afp/
+##
+###########################################################################################
+
+# NBA : Function which will print the current AFP (Apple File Sharing) configuration
+list_afp_config () {
+        local answer=$(call_freebox_api "/netshare/afp/")
+        echo -e "\n${white}\t\t\t\tAFP (APPLE FILE SHARING) CONFIGURATION:${norm}\n"
+        _check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+
+        local enabled=$(get_json_value_for_key "${answer}" "result.enabled")
+        local guest=$(get_json_value_for_key "${answer}" "result.guest_allow")
+        local login=$(get_json_value_for_key "${answer}" "result.login_name")
+        local stype=$(get_json_value_for_key "${answer}" "result.server_type")
+
+        [[ "${enabled}" != 'true' ]] \
+        && echo -e "${light_purple_sed}AFP SERVICE:\t\t\t${RED}disabled${norm}" \
+        || echo -e "${light_purple_sed}AFP SERVICE:\t\t\t${GREEN}enabled${norm}"
+        echo -e "${light_purple_sed}GUEST ACCESS:\t\t\t${WHITE}${guest}${norm}\t\t${light_purple_sed}LOGIN NAME:${WHITE}\t${login}${norm}"
+        echo -e "${light_purple_sed}SERVER TYPE (macOS icon):${WHITE}\t${stype}${norm}"
+echo
+}
+
+afp_config_list () {
+auto_relogin && list_afp_config
+}
+
+# NBA : Function which will print help on error for upd_afp_config
+param_afp_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_afp_config" \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_afp_config" \
+        || local listfunct=${list_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|enabled=\t\t# boolean 'true'/'false': enable/disable the AFP service|guest_allow=\t\t# boolean: allow guest (no login) access to shared files|login_name=\t\t# string: AFP user name|login_password=\t\t# string: AFP user password|server_type=\t\t# enum: icon shown in macOS, one of:${norm}" |tr "|" "\n" \
+&& echo -e "${BLUE}\t\t\t# powerbook powermac macmini imac macbook macbookpro macbookair macpro appletv airport xserve${norm}\n" \
+&& echo -e "NOTE: ${RED}this updates the AFP configuration, only send the parameter(s) you want to change (partial update)${norm}\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see the current configuration${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} enabled=\"true\" guest_allow=\"false\"${norm}\n" \
+&& echo -e "EXAMPLE (change icon):\n${BLUE}${progfunct} server_type=\"macmini\"${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'afp_config_object' object (partial - only fields the user supplied)
+check_and_feed_afp_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local boolfields="enabled guest_allow"
+        local servertypes="powerbook powermac macmini imac macbook macbookpro macbookair macpro appletv airport xserve"
+        error=0
+        afp_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_afp_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "guest_allow" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "login_name" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "login_password" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "server_type" ]] \
+                && param_afp_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                echo "${boolfields}" |grep -qw "${nameparam[$idparam]}" \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && updafpconfig="${nameparam[$idparam]} must be a boolean: true or false" \
+                        && param_afp_config_err
+                [[ "${nameparam[$idparam]}" == "server_type" ]] \
+                        && ! echo "${servertypes}" |grep -qw "${valueparam[$idparam]}" \
+                        && updafpconfig="'${valueparam[$idparam]}' is not a valid server_type" \
+                        && param_afp_config_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && afp_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "${boolfields}" |grep -qw "${nameparam[$idnameparam]}" \
+                                && echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+                                || echo "\"${nameparam[$idnameparam]}\":\"$(_json_escape "${valueparam[$idnameparam]}")\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo afp_config_object=${afp_config_object} >&2 # debug
+}
+
+# NBA : Function which will update the AFP configuration (partial update)
+upd_afp_config () {
+        local updafpconfig=""
+        error=0
+        check_and_feed_afp_config_param "${@}" \
+        && updafpconfig=$(update_freebox_api /netshare/afp/ "${afp_config_object}")
+        colorize_output "${updafpconfig}"
+}
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "LAN BROWSER" (discovered hosts)
+## => NEW: GET /lan/browser/interfaces/, GET/PUT /lan/browser/{interface}/{hostid}/
+##
+###########################################################################################
+
+# NBA : Function which will list the LAN interfaces browsable by the freebox
+# (most freeboxes only expose a single one: "pub")
+list_lan_interfaces () {
+	local answer=$(call_freebox_api "/lan/browser/interfaces/")
+	echo -e "\n${white}\t\t\t\tLAN BROWSABLE INTERFACES:${norm}\n"
+	_check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+	echo -e "$(_hdr_field '#:' 6)$(_hdr_field 'name:' 18)$(_hdr_field 'host count:' 0)"
+	local i=0
+	dump_json_keys_values "${answer}" >/dev/null
+	while [[ $(get_json_value_for_key "${answer}" "result[$i].name") != "" ]]
+	do
+		local name=$(get_json_value_for_key "${answer}" "result[$i].name")
+		local count=$(get_json_value_for_key "${answer}" "result[$i].host_count")
+		local padded_name
+		printf -v padded_name "%-16s  " "${name}"
+		echo -e "$(_row_num $i)${GREEN}${padded_name}${norm}${WHITE}${count}${norm}"
+	((i++))
+	done
+echo
+}
+
+lan_interfaces_list () {
+auto_relogin && list_lan_interfaces
+}
+
+
+# NBA : internal function which parses the LAN hosts of one interface into indexed bash
+# arrays using get_json_value_for_key (pure bash tokenizer). 'primary_name' is a
+# free-text, user-editable field that routinely contains spaces, so - like
+# _parse_lan_routes - this avoids the cache+egrep+cut idiom that would silently
+# word-split it.
+# --> fills global arrays: _LH_ID[] _LH_NAME[] _LH_MAC[] _LH_IP[] _LH_REACHABLE[]
+#     _LH_VENDOR[] _LH_TYPE[] _LH_PERSISTENT[]
+# --> success return 0 ; error return 1
+_parse_lan_hosts () {
+        local iface="${1:-pub}"
+        local answer=$(get_freebox_api "/lan/browser/${iface}/")
+        _check_success "${answer}" || return 1
+        _LH_ID=() ; _LH_NAME=() ; _LH_MAC=() ; _LH_IP=() ; _LH_REACHABLE=() ; _LH_VENDOR=() ; _LH_TYPE=() ; _LH_PERSISTENT=()
+        local i=0
+        dump_json_keys_values "${answer}" >/dev/null   # cache once for get_json_value_for_key
+        while [[ $(get_json_value_for_key "${answer}" "result[$i].id") != "" ]]
+        do
+                _LH_ID[$i]=$(get_json_value_for_key "${answer}" "result[$i].id")
+                _LH_NAME[$i]=$(get_json_value_for_key "${answer}" "result[$i].primary_name")
+                _LH_MAC[$i]=$(get_json_value_for_key "${answer}" "result[$i].l2ident.id")
+                _LH_IP[$i]=$(get_json_value_for_key "${answer}" "result[$i].l3connectivities[0].addr")
+                _LH_REACHABLE[$i]=$(get_json_value_for_key "${answer}" "result[$i].reachable")
+                _LH_VENDOR[$i]=$(get_json_value_for_key "${answer}" "result[$i].vendor_name")
+                _LH_TYPE[$i]=$(get_json_value_for_key "${answer}" "result[$i].host_type")
+                _LH_PERSISTENT[$i]=$(get_json_value_for_key "${answer}" "result[$i].persistent")
+        ((i++))
+        done
+        return 0   # see the comment in _parse_lan_routes: without this, exactly ONE host
+                   # on the interface would make the last ((i++)) return 1 and every caller
+                   # below would spuriously report a fetch failure
+}
+
+# NBA : Function which will list all hosts discovered on a LAN interface, colored
+# green/online or purple/offline (reachable)
+# parameters : interface (optional, default: "pub")
+list_lan_hosts () {
+	local iface="${1:-pub}"
+	_parse_lan_hosts "${iface}" || { echo -e "${RED}unable to fetch LAN hosts for interface '${iface}' (run list_lan_interfaces to see valid interfaces)${norm}" >&2; return 1; }
+	echo -e "\n${white}\t\t\t\tLAN HOSTS (interface: ${iface}):${norm}\n"
+	echo -e "$(_hdr_field '#:' 6)$(_hdr_field 'id:' 46)$(_hdr_field 'mac:' 44)$(_hdr_field 'ip:' 44)$(_hdr_field 'state:' 12)$(_hdr_field 'vendor:' 32)$(_hdr_field 'name:' 0)"
+	local i=0
+	while [[ "${_LH_ID[$i]}" != "" ]]
+	do
+		local padded_id padded_mac padded_ip padded_state padded_vendor
+		printf -v padded_id "%-44s  " "${_LH_ID[$i]}"
+		printf -v padded_mac "%-42s  " "${_LH_MAC[$i]}"
+		printf -v padded_ip "%-42s  " "${_LH_IP[$i]}"
+		printf -v padded_vendor "%-30s  " "${_LH_VENDOR[$i]}"
+		[[ "${_LH_REACHABLE[$i]}" == "true" ]] \
+			&& printf -v padded_state "%-10s  " "online" \
+			|| printf -v padded_state "%-10s  " "offline"
+		[[ "${_LH_REACHABLE[$i]}" == "true" ]] \
+			&& echo -e "$(_row_num $i)${GREEN}${padded_id}${padded_mac}${padded_ip}${padded_state}${padded_vendor}${norm}${RED}${_LH_NAME[$i]}${norm}" \
+			|| echo -e "$(_row_num $i)${PURPL}${padded_id}${padded_mac}${padded_ip}${padded_state}${padded_vendor}${norm}${BLUE}${_LH_NAME[$i]}${norm}"
+	((i++))
+	done
+echo
+}
+
+lan_hosts_list () {
+auto_relogin && list_lan_hosts "${1}"
+}
+
+
+# NBA : Function which will print help on error for LAN HOST functions :
+# - upd_lan_host
+# - del_lan_host (explains why deletion is not possible via this API)
+# ${action} parameter must be set by function which calling 'param_lan_host_err'
+param_lan_host_err () {
+error=1
+
+	[[ "${action}" == "upd" ]] && local funct="upd_lan_host"
+	[[ "${action}" == "del" ]] && local funct="del_lan_host"
+
+[[ "${prog_cmd}" == "" ]] \
+	&& local progfunct=${funct} \
+	|| local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+	&& local listfunct="list_lan_hosts" \
+	|| local listfunct=${list_cmd}
+
+# upd_lan_host param error
+[[ "${action}" == "upd" ]] \
+&& echo -e "\nERROR: ${RED}\"${progfunct}\" takes 'interface' 'hostid' then <param>:${norm}${BLUE}|interface\t\t# lan interface, ex: pub (run list_lan_interfaces to see available interfaces)|hostid\t\t\t# host id, ex: ether-00:24:d4:7e:00:4c (run \"${listfunct} <interface>\" to see all hosts)|primary_name=\t\t# optional: rename this host|domain_name=\t\t# optional: local domain name, must end with '.home' (ex: \"my-nas.home\"), empty string to remove it|persistent=\t\t# optional: boolean 'true'/'false' - keep this host remembered even when unreachable${norm}\n" |tr "|" "\n" \
+&& if [[ "${lanhostupderr}" != "" ]]; then echo -e "ERROR: ${RED}${lanhostupderr}${norm}\n"; fi \
+&& echo -e "NOTE: ${RED}please run \"${listfunct} <interface>\" to get the list of all hosts and their 'id'${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} pub ether-00:24:d4:7e:00:4c primary_name=\"Freebox Tv\"${norm}\n" \
+&& echo -e "EXAMPLE (set local domain):\n${BLUE}${progfunct} pub ether-00:24:d4:7e:00:4c domain_name=\"freebox-tv.home\"${norm}\n"
+
+# del_lan_host param error
+[[ "${action}" == "del" ]] \
+&& echo -e "\nERROR: ${RED}\"${progfunct}\" takes 'interface' then 'mac':${norm}${BLUE}|interface\t\t# lan interface, ex: pub (run list_lan_interfaces to see available interfaces)|mac\t\t\t# mac address of the host to delete, ex: aa:e7:cf:5b:38:72 (the library builds the actual host id \"ether-<mac>\" for you)${norm}\n" |tr "|" "\n" \
+&& echo -e "WARNING: ${RED}this uses an UNDOCUMENTED freebox API endpoint (DELETE /lan/browser/<interface>/ether-<mac>/) - it is NOT part of the official freebox API documentation, it was captured from the FreeboxOS web interface itself. Undocumented APIs can change or disappear without notice - USE AT YOUR OWN RISK${norm}\n" \
+&& if [[ "${dellanhosterr}" != "" ]]; then echo -e "ERROR: ${RED}${dellanhosterr}${norm}\n"; fi \
+&& echo -e "NOTE: ${RED}please run \"${listfunct} <interface>\" to get the list of all hosts and their mac address${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} pub aa:e7:cf:5b:38:72${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'lan_host_object' object
+# --> also sets non-local 'lan_iface' / 'lan_hostid' (interface + hostid, positional)
+check_and_feed_lan_host_param () {
+	local iface="${1}"
+	local hostid="${2}"
+	local param=("${@:3}")
+	local numparam=${#param[@]}
+	local idparam=0
+	local idnameparam=0
+	local nameparam=("")
+	local valueparam=("")
+	error=0
+	lan_iface="${iface}"
+	lan_hostid="${hostid}"
+	lan_host_object=("")
+	lanhostupderr=""
+
+	[[ "${iface}" == "" || "${hostid}" == "" ]] && param_lan_host_err
+	[[ "$numparam" -lt "1" && "${error}" != "1" ]] && param_lan_host_err
+	[[ "${error}" != "1" ]] && \
+	while [[ "${param[$idparam]}" != "" ]]
+	do
+		[[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "primary_name" \
+		&& "$(echo ${param[$idparam]}|cut -d= -f1)" != "persistent" \
+		&& "$(echo ${param[$idparam]}|cut -d= -f1)" != "domain_name" ]] \
+		&& param_lan_host_err && break
+		nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+		valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+		[[ "${nameparam[$idparam]}" == "persistent" ]] \
+			&& ! check_if_bool "${valueparam[$idparam]}" \
+			&& lanhostupderr="persistent must be a boolean: true or false" \
+			&& param_lan_host_err
+		[[ "${nameparam[$idparam]}" == "domain_name" ]] \
+			&& ! check_if_lan_domain_name "${valueparam[$idparam]}" \
+			&& lanhostupderr="domain_name must end with '.home', 63 characters max, letters/digits/hyphens only (a label cannot start with a digit or hyphen) - or an empty string to remove the local domain" \
+			&& param_lan_host_err
+	((idparam++))
+	done
+
+	[[ "${error}" != "1" ]] \
+		&& lan_host_object=$(
+		while [[ "${nameparam[$idnameparam]}" != "" ]]
+		do
+			[[ "${nameparam[$idnameparam]}" == "persistent" ]] \
+				&& echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+				|| echo "\"${nameparam[$idnameparam]}\":\"$(_json_escape "${valueparam[$idnameparam]}")\""
+		((idnameparam++))
+		done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+		&& return 0 \
+		|| return 1
+
+	[[ "${debug}" == "1" ]] && echo lan_host_object=${lan_host_object} >&2 # debug
+}
+
+# NBA : Function which will update a LAN host's editable properties (rename, persistence)
+# parameters : interface hostid [primary_name="..."] [persistent="true"|"false"]
+upd_lan_host () {
+        local updlanhost=""
+        action=upd
+        error=0
+        check_and_feed_lan_host_param "${@}"
+        [[ "${error}" != "1" ]] \
+        && updlanhost=$(update_freebox_api "/lan/browser/${lan_iface}/${lan_hostid}/" "${lan_host_object}")
+        colorize_output "${updlanhost}"
+        unset action
+}
+
+# NBA : There is no DELETE endpoint documented for LAN hosts in the freebox API - this function
+# is using an UNDOCUMENTED API so please use at your own risk !
+del_lan_host () {
+	local iface="${1}"
+	local mac="${2}"
+	local dellanhost=""
+	action=del
+	error=0
+	dellanhosterr=""
+	[[ "${iface}" == "" || "${mac}" == "" ]] && param_lan_host_err
+	[[ "${error}" != "1" ]] \
+		&& ! check_if_mac "${mac}" \
+		&& dellanhosterr="'${mac}' is not a valid mac address" \
+		&& param_lan_host_err
+	[[ "${error}" != "1" ]] \
+		&& dellanhost=$(del_freebox_api "/lan/browser/${iface}/ether-${mac}")
+	colorize_output "${dellanhost}"
+	unset action
+}
+
+
+####### NBA ADDING FUNCTION FOR SHOWING / DETAILING A SINGLE LAN HOST (by mac address) #######
+
+# NBA : internal function which fetches a single LAN host via its mac address
+# (GET /lan/browser/{interface}/ether-{mac}/) and parses every field, including ALL
+# l3connectivities[] entries (a host can have an ipv4 AND one or more ipv6 addresses
+# active at the same time) and ALL names[] entries (one per discovery source)
+# --> fills global scalars: _LHS_ID _LHS_NAME _LHS_DOMAIN _LHS_TYPE _LHS_VENDOR
+#     _LHS_PERSISTENT _LHS_REACHABLE _LHS_ACTIVE _LHS_FIRST_ACT _LHS_LAST_ACT
+# --> fills global arrays: _LHS_L3_ADDR[] _LHS_L3_AF[] _LHS_L3_ACTIVE[] _LHS_L3_REACHABLE[]
+#     _LHS_NAME_NAME[] _LHS_NAME_SRC[]
+# --> success return 0 ; error return 1
+_parse_lan_host_single () {
+	local iface="${1}"
+	local mac="${2}"
+	local answer=$(get_freebox_api "/lan/browser/${iface}/ether-${mac}/")
+	_LHS_RAW_ANSWER="${answer}"
+	_check_success "${answer}" || return 1
+	dump_json_keys_values "${answer}" >/dev/null
+	_LHS_ID=$(get_json_value_for_key "${answer}" "result.id")
+	_LHS_NAME=$(get_json_value_for_key "${answer}" "result.primary_name")
+	_LHS_DOMAIN=$(get_json_value_for_key "${answer}" "result.domain_name")
+	_LHS_TYPE=$(get_json_value_for_key "${answer}" "result.host_type")
+	_LHS_VENDOR=$(get_json_value_for_key "${answer}" "result.vendor_name")
+	_LHS_PERSISTENT=$(get_json_value_for_key "${answer}" "result.persistent")
+	_LHS_REACHABLE=$(get_json_value_for_key "${answer}" "result.reachable")
+	_LHS_ACTIVE=$(get_json_value_for_key "${answer}" "result.active")
+	_LHS_FIRST_ACT=$(get_json_value_for_key "${answer}" "result.first_activity")
+	_LHS_LAST_ACT=$(get_json_value_for_key "${answer}" "result.last_activity")
+
+	_LHS_L3_ADDR=() ; _LHS_L3_AF=() ; _LHS_L3_ACTIVE=() ; _LHS_L3_REACHABLE=()
+	local i=0
+	while [[ $(get_json_value_for_key "${answer}" "result.l3connectivities[$i].addr") != "" ]]
+	do
+		_LHS_L3_ADDR[$i]=$(get_json_value_for_key "${answer}" "result.l3connectivities[$i].addr")
+		_LHS_L3_AF[$i]=$(get_json_value_for_key "${answer}" "result.l3connectivities[$i].af")
+		_LHS_L3_ACTIVE[$i]=$(get_json_value_for_key "${answer}" "result.l3connectivities[$i].active")
+		_LHS_L3_REACHABLE[$i]=$(get_json_value_for_key "${answer}" "result.l3connectivities[$i].reachable")
+	((i++))
+	done
+
+	_LHS_NAME_NAME=() ; _LHS_NAME_SRC=()
+	i=0
+	while [[ $(get_json_value_for_key "${answer}" "result.names[$i].name") != "" ]]
+	do
+		_LHS_NAME_NAME[$i]=$(get_json_value_for_key "${answer}" "result.names[$i].name")
+		_LHS_NAME_SRC[$i]=$(get_json_value_for_key "${answer}" "result.names[$i].source")
+	((i++))
+	done
+	return 0   # see the comment in _parse_lan_routes for why this explicit return is required
+}
+
+# NBA : Function which will print help on error for lan_host_show / lan_host_detail
+# ${action} parameter must be set by function which calling 'param_lan_host_show_err'
+param_lan_host_show_err () {
+error=1
+
+	[[ "${action}" == "show" ]] && local funct="lan_host_show"
+	[[ "${action}" == "detail" ]] && local funct="lan_host_detail"
+
+[[ "${prog_cmd}" == "" ]] \
+	&& local progfunct=${funct} \
+	|| local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+	&& local listfunct="list_lan_hosts" \
+	|| local listfunct=${list_cmd}
+
+[[ "${action}" == "show" ]] \
+&& echo -e "\nERROR: ${RED}\"${progfunct}\" takes an optional 'interface' then 'mac=':${norm}${BLUE}|interface\t\t# lan interface, ex: pub (optional, default: pub)|mac=\t\t\t# mac address of the host, ex: aa:e7:cf:5b:38:72${norm}\n" |tr "|" "\n" \
+&& if [[ "${lanhostshowerr}" != "" ]]; then echo -e "ERROR: ${RED}${lanhostshowerr}${norm}\n"; fi \
+&& echo -e "NOTE: ${RED}please run \"${listfunct} <interface>\" to get the list of all hosts and their mac address${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} mac=\"aa:e7:cf:5b:38:72\"${norm}\n" \
+&& echo -e "EXAMPLE (specific interface):\n${BLUE}${progfunct} pub mac=\"aa:e7:cf:5b:38:72\"${norm}\n"
+
+[[ "${action}" == "detail" ]] \
+&& echo -e "\nERROR: ${RED}\"${progfunct}\" takes an optional 'interface' then 'mac=' (or the keyword 'all'):${norm}${BLUE}|interface\t\t# lan interface, ex: pub (optional, default: pub)|mac=\t\t\t# mac address of the host, ex: aa:e7:cf:5b:38:72|all\t\t\t# instead of mac=, show full detail for EVERY host on the interface${norm}\n" |tr "|" "\n" \
+&& if [[ "${lanhostshowerr}" != "" ]]; then echo -e "ERROR: ${RED}${lanhostshowerr}${norm}\n"; fi \
+&& echo -e "NOTE: ${RED}please run \"${listfunct} <interface>\" to get the list of all hosts and their mac address${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} mac=\"aa:e7:cf:5b:38:72\"${norm}\n" \
+&& echo -e "EXAMPLE (specific interface):\n${BLUE}${progfunct} pub mac=\"aa:e7:cf:5b:38:72\"${norm}\n" \
+&& echo -e "EXAMPLE (every host):\n${BLUE}${progfunct} all${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+# NBA : This function validates parameters for lan_host_show / lan_host_detail: an
+# optional positional 'interface' (default "pub") then mandatory 'mac='
+# --> sets non-local 'lan_host_show_iface' / 'lan_host_show_mac'
+check_and_feed_lan_host_show_param () {
+	local param=("${@}")
+	local numparam="$#"
+	local idparam=0
+	local mac=""
+	local iface="pub"
+	local allflag=""
+	error=0
+	lanhostshowerr=""
+	lan_host_show_iface=""
+	lan_host_show_mac=""
+	lan_host_show_all=""
+
+	[[ "$numparam" -lt "1" ]] && param_lan_host_show_err
+	while [[ "${error}" != "1" && "${param[$idparam]}" != "" ]]
+	do
+		if [[ "${param[$idparam]}" == mac=* ]]
+		then
+			mac="${param[$idparam]#mac=}"
+		elif [[ "${action}" == "detail" && "${param[$idparam]}" == "all" ]]
+		then
+			allflag="1"
+		elif [[ "${param[$idparam]}" != *=* ]]
+		then
+			iface="${param[$idparam]}"
+		else
+			param_lan_host_show_err
+		fi
+	((idparam++))
+	done
+
+	[[ "${error}" != "1" && "${allflag}" != "1" && "${mac}" == "" ]] && param_lan_host_show_err
+	[[ "${error}" != "1" && "${allflag}" != "1" ]] \
+	        && ! check_if_mac "${mac}" \
+	        && lanhostshowerr="'${mac}' is not a valid mac address" \
+	        && param_lan_host_show_err
+
+	lan_host_show_iface="${iface}"
+	lan_host_show_mac="${mac}"
+	lan_host_show_all="${allflag}"
+}
+
+# NBA : Function which will show a single LAN host (same columns as list_lan_hosts,
+# colored green/online or purple/offline), matched by its mac address
+# parameters : [interface] mac=<mac>   (interface optional, default: "pub")
+lan_host_show () {
+	action=show
+	error=0
+	check_and_feed_lan_host_show_param "${@}"
+	[[ "${error}" == "1" ]] && return 1
+	_parse_lan_host_single "${lan_host_show_iface}" "${lan_host_show_mac}" \
+		|| { echo -e "${RED}unable to fetch host '${lan_host_show_mac}' on interface '${lan_host_show_iface}' (run list_lan_hosts <interface> to see valid hosts)${norm}" >&2; return 1; }
+	echo -e "\n${white}\t\t\t\tLAN HOST (interface: ${lan_host_show_iface}):${norm}\n"
+	echo -e "$(_hdr_field 'id:' 30)$(_hdr_field 'mac:' 20)$(_hdr_field 'state:' 12)$(_hdr_field 'vendor:' 32)$(_hdr_field 'name:' 0)"
+	local padded_id padded_mac padded_state padded_vendor
+	printf -v padded_id "%-28s  " "${_LHS_ID}"
+	printf -v padded_mac "%-18s  " "${lan_host_show_mac}"
+	printf -v padded_vendor "%-30s  " "${_LHS_VENDOR}"
+	[[ "${_LHS_REACHABLE}" == "true" ]] \
+		&& printf -v padded_state "%-10s  " "online" \
+		|| printf -v padded_state "%-10s  " "offline"
+	[[ "${_LHS_REACHABLE}" == "true" ]] \
+		&& echo -e "${GREEN}${padded_id}${padded_mac}${padded_state}${padded_vendor}${norm}${RED}${_LHS_NAME}${norm}" \
+		|| echo -e "${PURPL}${padded_id}${padded_mac}${padded_state}${padded_vendor}${norm}${BLUE}${_LHS_NAME}${norm}"
+echo
+	unset action
+}
+
+# NBA : Function which will print the full detail of a single LAN host, matched by its
+# mac address: every ip/ipv6 address it has used (ALL l3connectivities[] entries, not
+# just the first one), every discovered name and its source, and all other properties
+# parameters : [interface] mac=<mac>   (interface optional, default: "pub")
+_print_lan_host_info () {
+	local answer="${1}"
+	[[ -x "$JQ" ]] \
+		&& local cache=("$(dump_json_keys_values_jq "${answer}")") \
+		|| local cache=("$(dump_json_keys_values "${answer}")")
+	local line category key value last_category="" any=0
+	while IFS= read -r line
+	do
+		[[ "${line}" =~ ^result\.info\.([^.=]+)\.(.+)\ =\ (.*)$ ]] || continue
+		category="${BASH_REMATCH[1]}"
+		key="${BASH_REMATCH[2]}"
+		value="${BASH_REMATCH[3]}"
+		if [[ "${category}" != "${last_category}" ]]
+		then
+			echo -e "\t  [${PURPL}${category}${norm}]"
+			last_category="${category}"
+		fi
+		echo -e "\t\t${key} = ${GREEN}${value}${norm}"
+		any=1
+	done <<< "$(echo -e "${cache[@]}")"
+	[[ "${any}" -eq 0 ]] && echo -e "\t  (no additional discovery information)"
+}
+
+_print_lan_host_detail_one () {
+	local mac="${1}"
+	echo -e "\nLAN HOST ${_LHS_ID} : Full details properties :\n"
+	echo -e "\tprimary_name = ${GREEN}${_LHS_NAME}${norm}"
+	echo -e "\tdomain_name = ${GREEN}${_LHS_DOMAIN}${norm}"
+	echo -e "\thost_type = ${GREEN}${_LHS_TYPE}${norm}"
+	echo -e "\tvendor_name = ${GREEN}${_LHS_VENDOR}${norm}"
+	echo -e "\tmac_address = ${GREEN}${mac}${norm}"
+	echo -e "\tpersistent = ${WHITE}${_LHS_PERSISTENT}${norm}"
+	[[ "${_LHS_REACHABLE}" == "true" ]] \
+		&& echo -e "\treachable = ${GREEN}${_LHS_REACHABLE}${norm}" \
+		|| echo -e "\treachable = ${PURPL}${_LHS_REACHABLE}${norm}"
+	[[ "${_LHS_ACTIVE}" == "true" ]] \
+		&& echo -e "\tactive = ${GREEN}${_LHS_ACTIVE}${norm}" \
+		|| echo -e "\tactive = ${PURPL}${_LHS_ACTIVE}${norm}"
+	echo -e "\tfirst_activity = ${WHITE}${_LHS_FIRST_ACT}${norm} ($(date -d "@${_LHS_FIRST_ACT}" 2>/dev/null || echo "n/a"))"
+	echo -e "\tlast_activity = ${WHITE}${_LHS_LAST_ACT}${norm} ($(date -d "@${_LHS_LAST_ACT}" 2>/dev/null || echo "n/a"))"
+
+	echo -e "\n\tall ip / ipv6 addresses used by this host:"
+	local i=0
+	while [[ "${_LHS_L3_ADDR[$i]}" != "" ]]
+	do
+		[[ "${_LHS_L3_REACHABLE[$i]}" == "true" ]] \
+			&& echo -e "\t  [${_LHS_L3_AF[$i]}]\t${GREEN}${_LHS_L3_ADDR[$i]}${norm}\t(active=${_LHS_L3_ACTIVE[$i]}, reachable=${_LHS_L3_REACHABLE[$i]})" \
+			|| echo -e "\t  [${_LHS_L3_AF[$i]}]\t${PURPL}${_LHS_L3_ADDR[$i]}${norm}\t(active=${_LHS_L3_ACTIVE[$i]}, reachable=${_LHS_L3_REACHABLE[$i]})"
+	((i++))
+	done
+
+	echo -e "\n\tall discovered names for this host:"
+	i=0
+	while [[ "${_LHS_NAME_NAME[$i]}" != "" ]]
+	do
+		echo -e "\t  ${WHITE}${_LHS_NAME_NAME[$i]}${norm}\t(source: ${_LHS_NAME_SRC[$i]})"
+	((i++))
+	done
+	echo -e "\n\tadditional discovery information (info):"
+	_print_lan_host_info "${_LHS_RAW_ANSWER}"
+
+echo
+}
+
+lan_host_detail () {
+	action=detail
+	error=0
+	check_and_feed_lan_host_show_param "${@}"
+	[[ "${error}" == "1" ]] && return 1
+
+	if [[ "${lan_host_show_all}" == "1" ]]
+	then
+		_parse_lan_hosts "${lan_host_show_iface}" \
+			|| { echo -e "${RED}unable to fetch LAN hosts for interface '${lan_host_show_iface}'${norm}" >&2; return 1; }
+		local i=0
+		while [[ "${_LH_MAC[$i]}" != "" ]]
+		do
+			_parse_lan_host_single "${lan_host_show_iface}" "${_LH_MAC[$i]}" \
+				&& _print_lan_host_detail_one "${_LH_MAC[$i]}" \
+				|| echo -e "${RED}unable to fetch detail for host with mac '${_LH_MAC[$i]}'${norm}" >&2
+		((i++))
+		done
+	else
+		_parse_lan_host_single "${lan_host_show_iface}" "${lan_host_show_mac}" \
+			|| { echo -e "${RED}unable to fetch host '${lan_host_show_mac}' on interface '${lan_host_show_iface}' (run list_lan_hosts <interface> to see valid hosts)${norm}" >&2; return 1; }
+		_print_lan_host_detail_one "${lan_host_show_mac}"
+	fi
+	unset action
+}
+
+
+
+
+
+
+
+
+
+
 ####### NBA ADDING FUNCTION FOR MANAGING INCOMMING NAT REDIRECTION API #######
 
 # NBA : Function which will list all incomming NAT redirections
@@ -3413,8 +5188,8 @@ del_dhcp_static_lease () {
 list_fw_redir () {
 
 	local answer=$(call_freebox_api "/fw/redir/")
-	echo -e "\n${white}\t\t\t\tNETWORK INCOMMING NAT REDIRECTIONS:${norm}\n" 	
-	# When json reply is big (ex: recieve a lanHost object) we need to cache results 
+	echo -e "\n${white}\t\t\t\tNETWORK INCOMMING NAT REDIRECTIONS:${norm}\n"
+	# When json reply is big (ex: recieve a lanHost object) we need to cache results
         [[ -x "$JQ" ]] \
         && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
         || local cache_result=("$(dump_json_keys_values "${answer}")")
@@ -3430,9 +5205,9 @@ list_fw_redir () {
 	local i=0 j=0
 	[[ "${trace}" == "1" ]] && echo -e "${cache_result[@]}" >&2 # debug
 	[[ "${debug}" == "1" ]] && echo -e "${id[@]}\nid[$i]=${id[$i]}" >&2 # debug
-	echo -e "\e[4m${WHITE}#:\tid:\tlan-port:\tprotocol:\tlan_ip:\t\t\twan-port-range:\t\tallowed-ip\tstate:\t\thostname:${norm}" 	
+	echo -e "\e[4m${WHITE}#:\tid:\tlan-port:\tprotocol:\tlan_ip:\t\t\twan-port-range:\t\tallowed-ip\tstate:\t\thostname:${norm}"
         while [[ "${id[$i]}" != "" ]];
-        	do
+		do
 		[[ "${state[$i]}" == "true" ]] \
 			&& state[$i]="active" \
 			|| state[$i]="disabled"
@@ -3441,7 +5216,8 @@ list_fw_redir () {
 			|| echo -e "$j:\t${RED}${id[$i]}\t${PURPL}${lan_port[$i]}\t\t${ip_proto[$i]}\t\t${lan_ip[$i]}\t\t${wan_port_s[$i]}\t${wan_port_e[$i]}\t\t${src_ip[$i]}   \t${state[$i]}${norm}   \t${BLUE}${hostname[$i]}${norm}"
 	((i++))
 	((j++))
-	done  || return 1
+	done
+	return 0
 echo
 }
 
@@ -3455,8 +5231,8 @@ echo
 # ${action} parameter must be set by function which calling 'param_fw_redir_err' (or by primitive) 
 # This function return 1
 
-param_fw_redir_err () {    
-# when calling this function inside this lib, prog_cmd= and prog_list= must be null: ""    
+param_fw_redir_err () {
+# when calling this function inside this lib, prog_cmd= and prog_list= must be null: ""
 # when calling this function from an external program, you must set 'prog_cmd' and 'list_cmd' values you use to call this function as a GLOBAL VARIABLES. ex : prog_cmd="fbxvm-ctrl add fw_redir" list_cmd="fbxvm-ctrl list fw_redir"
 error=1
 
@@ -3469,18 +5245,18 @@ error=1
 
 [[ "${prog_cmd}" == "" ]] \
         && local progfunct=${funct} \
-        || local progfunct=${prog_cmd} 
+        || local progfunct=${prog_cmd}
 [[ "${list_cmd}" == "" ]] \
         && local listfunct="list_fw_redir" \
-        || local listfunct=${list_cmd} 
+        || local listfunct=${list_cmd}
 
-# add_fw_redir param error	
+# add_fw_redir param error
 [[ "${action}" == "add" ]] \
 && echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|lan_port=\t\t# lan start port: must be a number in [1-65535]|wan_port_start=\t\t# wan start port: must be a number in [1-65535]|wan_port_end=\t\t# wan end port: must be a number in [1-65535]|lan_ip=\t\t\t# local destination ip|ip_proto=\t\t# must be: 'tcp' or 'udp'|src_ip=\t\t\t# allowed ip: default: all ip allowed|enabled=\t\t# boolean 'true' or 'false': default 'true'|comment=\t\t# string: maximum 63 char ${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to create a destination NAT redirection: ${norm}\n${BLUE}wan_port_start= \nlan_port= \nlan_ip= \nip_proto=${norm}\n" \
 && echo -e "WARNING: ${RED}if not specified on cmdline following parameters will be reset to their default values${norm}${BLUE}|wan_port_end=\t\t# default value: wan_port_start|src_ip=\t\t\t# default: all ip allowed: 0.0.0.0|enabled=\t\t# default: true${norm}\n" |tr "|" "\n"  \
 && echo -e "EXAMPLE: (simple)\n${BLUE}${progfunct} wan_port_start=\"443\" lan_port=\"443\" lan_ip=\"192.168.123.123\" ip_proto=\"tcp\" comment=\"NAT: destination nat: HTTPS to VM 14RV-FSRV-123:HTTPS\"${norm}\n" \
-&& echo -e "EXAMPLE: (full)\n${BLUE}${progfunct} wan_port_start=\"60000\" wan_port_end=\"60010\" lan_port=\"60000\" lan_ip=\"192.168.123.123\" ip_proto=\"tcp\" src_ip=\"22.22.22.22\" enabled=\"true\" comment=\"NAT: destination nat: PASV_FTP to VM 14RV-FSRV-123:FTP_PASV\"${norm}\n" 
+&& echo -e "EXAMPLE: (full)\n${BLUE}${progfunct} wan_port_start=\"60000\" wan_port_end=\"60010\" lan_port=\"60000\" lan_ip=\"192.168.123.123\" ip_proto=\"tcp\" src_ip=\"22.22.22.22\" enabled=\"true\" comment=\"NAT: destination nat: PASV_FTP to VM 14RV-FSRV-123:FTP_PASV\"${norm}\n"
 
 # comment=(MAX 63 char)
 
@@ -3491,14 +5267,14 @@ error=1
 && echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to update a destination NAT redirection: ${norm}${BLUE}|id=|wan_port_start=${norm}\n" |tr "|" "\n"  \
 && echo -e "WARNING: ${RED}if not specified on cmdline following parameters will be reset to their default values${norm}${BLUE}|wan_port_end=\t\t# default value: wan_port_start|src_ip=\t\t\t# default: all ip allowed: 0.0.0.0|enabled=\t\t# default: true${norm}\n" |tr "|" "\n"  \
 && echo -e "EXAMPLE: (simple)\n${BLUE}${progfunct} id=34 wan_port_start=\"443\" lan_port=\"443\" lan_ip=\"192.168.123.123\" comment=\"NAT: destination nat: HTTPS to VM 14RV-FSRV-123:HTTPS\"${norm}\n" \
-&& echo -e "EXAMPLE: (full)\n${BLUE}${progfunct} id=34 wan_port_start=\"60000\" wan_port_end=\"60010\" lan_port=\"60000\" lan_ip=\"192.168.123.123\" comment=\"NAT: destination nat: FTP(S) PASIVE PORT to VM 14RV-FSRV-123:FTP_PASV\"${norm}\n" 
+&& echo -e "EXAMPLE: (full)\n${BLUE}${progfunct} id=34 wan_port_start=\"60000\" wan_port_end=\"60010\" lan_port=\"60000\" lan_ip=\"192.168.123.123\" comment=\"NAT: destination nat: FTP(S) PASIVE PORT to VM 14RV-FSRV-123:FTP_PASV\"${norm}\n"
 
 
 # del_fw_redir param error
 [[ "${action}" == "del" ]] \
 && echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id\t\t\t# id: must be a number${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}please run \"${listfunct}\" to get list of all destination NAT redirection (showing all 'id'):${norm}\n${BLUE}${listfunct}${norm}\n" \
-&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n" 
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n"
 
 
 
@@ -3506,14 +5282,14 @@ error=1
 [[ "${action}" == "ena" ]] \
 && echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id\t\t\t# id: must be a number${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}please run \"${listfunct}\" to get list of all destination NAT redirection (showing all 'id'):${norm}\n${BLUE}${listfunct}${norm}\n" \
-&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n" 
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n"
 
 
 # dis_fw_redir param error
 [[ "${action}" == "dis" ]] \
 && echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|id\t\t\t# id: must be a number${norm}\n" |tr "|" "\n" \
 && echo -e "NOTE: ${RED}please run  \"${listfunct}\" to get list of all destination NAT redirection (showing all 'id'):${norm}\n${BLUE}${listfunct}${norm}\n" \
-&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n" 
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 34${norm}\n"
 
 unset prog_cmd list_cmd
 return 1
@@ -3539,7 +5315,7 @@ check_and_feed_fw_redir_param () {
 	local src_ip=
 	local enabled=
         local idparam=0
-	local idnameparam=0 
+	local idnameparam=0
         local numparam="$#"
         local nameparam=("")
         local valueparam=("")
@@ -3567,7 +5343,7 @@ check_and_feed_fw_redir_param () {
                 && param_fw_redir_err && break
                 nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
                 valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
-                [[ "${nameparam[$idparam]}" == "wan_port_start" ]] && wan_port_start=${valueparam[$idparam]}  
+                [[ "${nameparam[$idparam]}" == "wan_port_start" ]] && wan_port_start=${valueparam[$idparam]}
                 [[ "${nameparam[$idparam]}" == "wan_port_end" ]] && wan_port_end=${valueparam[$idparam]}
                 [[ "${nameparam[$idparam]}" == "lan_port" ]] && lan_port=${valueparam[$idparam]}
                 [[ "${nameparam[$idparam]}" == "lan_ip" ]] && lan_ip=${valueparam[$idparam]}
@@ -3578,18 +5354,17 @@ check_and_feed_fw_redir_param () {
                 [[ "${nameparam[$idparam]}" == "comment" ]] && comment=${valueparam[$idparam]}
         ((idparam++))
         done
-	
-	
+
 	# testing *port* is a number in [1-65535]
 	for port in $wan_port_start $wan_port_end $lan_port ; do
 	[[ "${port}" != "" && "${error}" != "1" && "${action}" == "add" ]] \
 		&& ! check_if_port $port \
 		&& addfwredir="${port_err_msg}" \
-		&& param_fw_redir_err 
+		&& param_fw_redir_err
 	[[ "${port}" != "" && "${error}" != "1" && "${action}" == "upd" ]] \
 		&& ! check_if_port $port \
 		&& updfwredir="${port_err_msg}" \
-		&& param_fw_redir_err 
+		&& param_fw_redir_err
 	done
 
 	# testing 'lan_ip' is a local ip address as describes in rfc1918
@@ -3611,7 +5386,7 @@ check_and_feed_fw_redir_param () {
                 && ! check_if_ip $src_ip \
                 && updfwredir="${src_ip_err_msg}" \
                 && param_fw_redir_err
-	
+
 	# testing 'comment' length not exceeded 63 char
 	[[ "${comment}" != "" && "${error}" != "1" && "${action}" == "add" ]] \
 		&& [[ "$(echo $comment |wc -m)" -gt 63 ]] \
@@ -3621,7 +5396,7 @@ check_and_feed_fw_redir_param () {
 		&& [[ "$(echo $comment |wc -m)" -gt 63 ]] \
                 && updfwredir="comment cannot exceeded 63 char" \
                 && param_fw_redir_err
-	
+
         # Affecting default values    
 	[[ "${wan_port_end}" == ""  ]] \
 		&& wan_port_end=${wan_port_start} \
@@ -3639,12 +5414,12 @@ check_and_feed_fw_redir_param () {
 	# verify 'id' is specified for action=upd
 	if [[ "${action}" == "upd"  ]]
 	then
-		echo ${nameparam[@]}|grep -q 'id' 
+		echo ${nameparam[@]}|grep -q 'id'
 		[[ "$?" -eq "1" ]] \
 			&& [[ "${error}" != "1" ]] \
 			&& param_fw_redir_err
 	fi
-	
+
 	#verify 'ip_proto' is specified for action=add
         if [[ "${action}" == "add"  ]]
         then
@@ -3665,7 +5440,7 @@ check_and_feed_fw_redir_param () {
 		((idnameparam++))
 		done | tr "\n" "," |sed -e 's@"@\"@g' -e 's@^@{@' -e 's@,$@}@' ) \
 		&& return 0 \
-		|| return 1	
+		|| return 1
 
 	[[ "${debug}" == "1" ]] && echo fw_redir_object=${fw_redir_object} >&2 # debug
 
@@ -3681,7 +5456,7 @@ check_and_feed_fw_redir_param () {
 # - lan_ip
 # - ip_proto
 add_fw_redir () {
-	local addfwredir="" 
+        local addfwredir=""
         action=add
         error=0
         check_and_feed_fw_redir_param "${@}" \
@@ -3695,7 +5470,7 @@ add_fw_redir () {
 # This function takes 'id' + add_fw_redir parameters 
 # (only id and wan_port_start are mandatory)  
 upd_fw_redir () {
-        local updfwredir="" 
+        local updfwredir=""
         action=upd
         error=0
         check_and_feed_fw_redir_param "${@}" \
@@ -3705,8 +5480,8 @@ upd_fw_redir () {
 }
 
 
-# NBA : Function which will delete an existing NAT redirection 
-# This function takes 'id' parameter 
+# NBA : Function which will delete an existing NAT redirection
+# This function takes 'id' parameter
 del_fw_redir () {
 	local id=${1}
         local delfwredir=""
@@ -3716,16 +5491,16 @@ del_fw_redir () {
         ! [[ "$id" =~ ^[0-9]+$ ]] \
                 && iderr=1 \
         	&& delfwredir="Error : 'id' must be a number !" \
-                && param_fw_redir_err 
+                && param_fw_redir_err
         [[ "$iderr" -eq "0" ]] \
-        	&& delfwredir=$(del_freebox_api /fw/redir/${id}) 
-        colorize_output "${delfwredir}" 
+                && delfwredir=$(del_freebox_api /fw/redir/${id})
+        colorize_output "${delfwredir}"
         unset iderr action
 }
 
 
-# NBA : Function which will enable an existing NAT redirection 
-# This function takes 'id' parameter 
+# NBA : Function which will enable an existing NAT redirection
+# This function takes 'id' parameter
 ena_fw_redir () {
         local id=${1}
         local enafwredir=""
@@ -3735,7 +5510,7 @@ ena_fw_redir () {
         ! [[ "$id" =~ ^[0-9]+$ ]] \
                 && iderr=1 \
                 && enafwredir="Error : 'id' must be a number !" \
-                && param_fw_redir_err 
+                && param_fw_redir_err
         [[ "$iderr" -eq "0" ]] \
                 && enafwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":true}")
         colorize_output "${enafwredir}"
@@ -3744,7 +5519,7 @@ ena_fw_redir () {
 
 
 # NBA : Function which will disable an existing NAT redirection
-# This function takes 'id' parameter 
+# This function takes 'id' parameter
 dis_fw_redir () {
         local id=${1}
         local disfwredir=""
@@ -3754,12 +5529,1024 @@ dis_fw_redir () {
         ! [[ "$id" =~ ^[0-9]+$ ]] \
                 && iderr=1 \
                 && disfwredir="Error : 'id' must be a number !" \
-                && param_fw_redir_err 
+                && param_fw_redir_err
         [[ "$iderr" -eq "0" ]] \
                 && disfwredir=$(update_freebox_api /fw/redir/${id} "{\"enabled\":false}")
         colorize_output "${disfwredir}"
         unset iderr action
 }
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "FIREWALL DMZ"
+## => NEW: GET/PUT /fw/dmz/
+##
+###########################################################################################
+
+# NBA : Function which will print the current DMZ configuration
+list_fw_dmz () {
+        local answer=$(call_freebox_api "/fw/dmz/")
+        echo -e "\n${white}\t\t\t\tFIREWALL DMZ CONFIGURATION:${norm}\n"
+        _check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+        local enabled=$(get_json_value_for_key "${answer}" "result.enabled")
+        local ip=$(get_json_value_for_key "${answer}" "result.ip")
+        [[ "${enabled}" != 'true' ]] \
+        && echo -e "${light_purple_sed}DMZ:\t\t${RED}disabled${norm}\t${light_purple_sed}TARGET IP (kept when disabled):${WHITE}\t${ip}${norm}" \
+        || echo -e "${light_purple_sed}DMZ:\t\t${GREEN}enabled${norm}  ${WHITE}-> ALL unmatched incoming traffic is forwarded to:${norm} ${GREEN}${ip}${norm}"
+echo
+}
+
+fw_dmz_list () {
+auto_relogin && list_fw_dmz
+}
+
+# NBA : Function which will print help on error for upd_fw_dmz
+param_fw_dmz_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_fw_dmz" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|ip=\t\t\t# lan ip address to expose as DMZ host (receives ALL unmatched incoming traffic)|enabled=\t\t# boolean 'true' or 'false'${norm}\n" |tr "|" "\n" \
+&& echo -e "WARNING: ${RED}a DMZ host is FULLY exposed to the internet - every unmatched incoming port is forwarded to it, bypassing all other firewall rules. Prefer add_fw_redir for specific ports whenever possible.${norm}\n" \
+&& if [[ "${dmzerr}" != "" ]]; then echo -e "ERROR: ${RED}${dmzerr}${norm}\n"; fi \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} ip=\"192.168.1.38\" enabled=\"true\"${norm}\n" \
+&& echo -e "EXAMPLE (quick disable):\n${BLUE}dis_fw_dmz${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'fw_dmz_object' object (partial - only fields the user supplied)
+check_and_feed_fw_dmz_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        error=0
+        dmzerr=""
+        fw_dmz_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_fw_dmz_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "ip" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" ]] \
+                && param_fw_dmz_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "ip" ]] \
+                        && ! check_if_ip "${valueparam[$idparam]}" \
+                        && dmzerr="ip must be a valid ip address" \
+                        && param_fw_dmz_err
+                [[ "${nameparam[$idparam]}" == "enabled" ]] \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && dmzerr="enabled must be a boolean: true or false" \
+                        && param_fw_dmz_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && fw_dmz_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        [[ "${nameparam[$idnameparam]}" == "enabled" ]] \
+                                && echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}" \
+                                || echo "\"${nameparam[$idnameparam]}\":\"${valueparam[$idnameparam]}\""
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo fw_dmz_object=${fw_dmz_object} >&2 # debug
+}
+
+# NBA : Function which will update the DMZ configuration (partial update)
+upd_fw_dmz () {
+        local updfwdmz=""
+        error=0
+        check_and_feed_fw_dmz_param "${@}" \
+        && updfwdmz=$(update_freebox_api /fw/dmz/ "${fw_dmz_object}")
+        colorize_output "${updfwdmz}"
+}
+
+# NBA : Function which will quickly enable the DMZ (keeps the currently configured ip)
+ena_fw_dmz () {
+        local enafwdmz=$(update_freebox_api /fw/dmz/ "{\"enabled\":true}")
+        colorize_output "${enafwdmz}"
+}
+
+# NBA : Function which will quickly disable the DMZ
+dis_fw_dmz () {
+        local disfwdmz=$(update_freebox_api /fw/dmz/ "{\"enabled\":false}")
+        colorize_output "${disfwdmz}"
+}
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "FIREWALL INCOMING PORTS"
+## => NEW: GET /fw/incoming/, GET/PUT /fw/incoming/{port_id} - controls remote access
+## bindings for freebox services (http/https admin, ftp, vpn, bittorrent, ...)
+##
+###########################################################################################
+
+# NBA : Function which will list all incoming port bindings (remote access to freebox
+# services : admin UI, FTP, VPN, bittorrent, ...)
+list_fw_incoming () {
+	local answer=$(call_freebox_api "/fw/incoming/")
+	echo -e "\n${white}\t\t\t\tFIREWALL INCOMING PORTS (remote access to freebox services):${norm}\n"
+	_check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+	[[ -x "$JQ" ]] \
+	&& local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+	|| local cache_result=("$(dump_json_keys_values "${answer}")")
+	local id=($(echo -e "${cache_result[@]}" |egrep ].id |cut -d' ' -f3))
+	local state=($(echo -e "${cache_result[@]}" |egrep ].enabled |cut -d' ' -f3))
+	local active=($(echo -e "${cache_result[@]}" |egrep ].active |cut -d' ' -f3))
+	local port=($(echo -e "${cache_result[@]}" |egrep ].in_port |cut -d' ' -f3))
+	local type=($(echo -e "${cache_result[@]}" |egrep ].type |cut -d' ' -f3))
+	local i=0
+	# NBA : 'id' (http, https, ftp, bittorrent-main, openvpn_routed, ...) varies too much in
+	# length for a fixed tab count to stay aligned - pad the PLAIN text to a fixed width with
+	# printf first, THEN wrap the padded (already fixed-width) string in color codes, so the
+	# invisible ANSI escape bytes never get counted towards the column width
+	echo -e "$(_hdr_field '#:' 6)$(_hdr_field 'id:' 22)$(_hdr_field 'protocol:' 12)$(_hdr_field 'port:' 10)$(_hdr_field 'allowed:' 12)$(_hdr_field 'active:' 0)"
+	while [[ "${id[$i]}" != "" ]]
+	do
+		local padded_id padded_type padded_port padded_state
+		printf -v padded_id "%-20s  " "${id[$i]}"
+		printf -v padded_type "%-10s  " "${type[$i]}"
+		printf -v padded_port "%-8s  " "${port[$i]}"
+		[[ "${state[$i]}" == "true" ]] \
+			&& printf -v padded_state "%-10s  " "allowed" \
+			|| printf -v padded_state "%-10s  " "blocked"
+		[[ "${state[$i]}" == "true" ]] \
+			&& echo -e "$(_row_num $i)${GREEN}${padded_id}${norm}${padded_type}${padded_port}${GREEN}${padded_state}${norm}${active[$i]}" \
+			|| echo -e "$(_row_num $i)${PURPL}${padded_id}${norm}${padded_type}${padded_port}${PURPL}${padded_state}${norm}${active[$i]}"
+	((i++))
+	done
+echo
+}
+
+fw_incoming_list () {
+auto_relogin && list_fw_incoming
+}
+
+# NBA : Function which will print help on error for INCOMING PORT functions :
+# - upd_fw_incoming
+# - ena_fw_incoming
+# - dis_fw_incoming
+# ${action} parameter must be set by function which calling 'param_fw_incoming_err'
+param_fw_incoming_err () {
+error=1
+
+        [[ "${action}" == "upd" \
+        || "${action}" == "ena" \
+        || "${action}" == "dis" ]] \
+        && local funct="${action}_fw_incoming"
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct=${funct} \
+        || local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+        && local listfunct="list_fw_incoming" \
+        || local listfunct=${list_cmd}
+
+# upd_fw_incoming param error
+[[ "${action}" == "upd" ]] \
+&& echo -e "\nERROR: ${RED}\"${progfunct}\" takes 'port_id' then <param>:${norm}${BLUE}|port_id\t\t\t# incoming port identifier, ex: http, https, ftp, bittorrent-main, openvpn_routed, pptp, ... (run \"${listfunct}\" to see all ids)|in_port=\t\t# optional: new binding port number|enabled=\t\t# optional: boolean 'true'/'false' - allow/block this port binding${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see all valid port_id and their current settings (min_port/max_port aren't shown but are enforced by the freebox)${norm}\n" \
+&& if [[ "${fwincomingerr}" != "" ]]; then echo -e "ERROR: ${RED}${fwincomingerr}${norm}\n"; fi \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} https in_port=\"443\"${norm}\n"
+
+# ena_fw_incoming / dis_fw_incoming param error
+[[ "${action}" == "ena" || "${action}" == "dis" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|port_id\t\t\t# incoming port identifier, ex: http, https, ftp, ...${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to see all valid port_id${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} https${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+
+
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'fw_incoming_object' object (partial)
+# --> also sets non-local 'incoming_port_id'
+check_and_feed_fw_incoming_param () {
+        local port_id="${1}"
+        local param=("${@:2}")
+        local numparam=${#param[@]}
+        local idparam=0
+        local idnameparam=0
+        local nameparam=("")
+        local valueparam=("")
+        error=0
+        fwincomingerr=""
+        incoming_port_id="${port_id}"
+        fw_incoming_object=("")
+
+        [[ "${port_id}" == "" ]] && param_fw_incoming_err
+        [[ "$numparam" -lt "1" && "${error}" != "1" ]] && param_fw_incoming_err
+        [[ "${error}" != "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "in_port" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" ]] \
+                && param_fw_incoming_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "in_port" ]] \
+                        && ! check_if_port "${valueparam[$idparam]}" \
+                        && fwincomingerr="in_port must be a number in [1-65535]" \
+                        && param_fw_incoming_err
+                [[ "${nameparam[$idparam]}" == "enabled" ]] \
+                        && ! check_if_bool "${valueparam[$idparam]}" \
+                        && fwincomingerr="enabled must be a boolean: true or false" \
+                        && param_fw_incoming_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && fw_incoming_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}"
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo fw_incoming_object=${fw_incoming_object} >&2 # debug
+}
+
+# NBA : Function which will update an incoming port binding (partial update)
+# parameters : port_id [in_port="..."] [enabled="true"|"false"]
+upd_fw_incoming () {
+        local updfwincoming=""
+        action=upd
+        error=0
+        check_and_feed_fw_incoming_param "${@}"
+        [[ "${error}" != "1" ]] \
+        && updfwincoming=$(update_freebox_api "/fw/incoming/${incoming_port_id}" "${fw_incoming_object}")
+        colorize_output "${updfwincoming}"
+        unset action
+}
+
+# NBA : Function which will quickly allow (enable) an incoming port binding
+ena_fw_incoming () {
+        local port_id="${1}"
+        action=ena
+        [[ "${port_id}" == "" ]] && param_fw_incoming_err
+        local enafwincoming=$(update_freebox_api "/fw/incoming/${port_id}" "{\"enabled\":true}")
+        colorize_output "${enafwincoming}"
+        unset action
+}
+
+# NBA : Function which will quickly block (disable) an incoming port binding
+dis_fw_incoming () {
+        local port_id="${1}"
+        action=dis
+        [[ "${port_id}" == "" ]] && param_fw_incoming_err
+        local disfwincoming=$(update_freebox_api "/fw/incoming/${port_id}" "{\"enabled\":false}")
+        colorize_output "${disfwincoming}"
+        unset action
+}
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "IPv6 CONNECTION CONFIGURATION"
+## => NEW: GET/PUT /connection/ipv6/config/ - global IPv6 settings + routing of the 8
+## delegated /64 prefixes to LAN devices
+##
+###########################################################################################
+
+# NBA : Function which will print the current IPv6 connection configuration, including
+# the 8 delegated /64 prefixes and which one (if any) is routed to a LAN device
+list_ipv6_config () {
+        local answer=$(call_freebox_api "/connection/ipv6/config/")
+        echo -e "\n${white}\t\t\t\tIPv6 CONNECTION CONFIGURATION:${norm}\n"
+        _check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+
+        local enabled=$(get_json_value_for_key "${answer}" "result.ipv6_enabled")
+        local fw=$(get_json_value_for_key "${answer}" "result.ipv6_firewall")
+        local pfw=$(get_json_value_for_key "${answer}" "result.ipv6_prefix_firewall")
+        local ll=$(get_json_value_for_key "${answer}" "result.ipv6ll")
+
+        [[ "${enabled}" != 'true' ]] \
+        && echo -e "${light_purple_sed}IPv6:\t\t\t${RED}disabled${norm}" \
+        || echo -e "${light_purple_sed}IPv6:\t\t\t${GREEN}enabled${norm}"
+        echo -e "${light_purple_sed}IPv6 FIREWALL:\t\t${WHITE}${fw}${norm}\t${light_purple_sed}PREFIX FIREWALL:${WHITE}\t${pfw}${norm}"
+        echo -e "${light_purple_sed}LINK-LOCAL ADDRESS:\t${WHITE}${ll}${norm}"
+        echo -e "\n\e[4m${WHITE}#:\tprefix:\t\t\t\t\tnext_hop:${norm}"
+        local i=0
+        dump_json_keys_values "${answer}" >/dev/null
+        while [[ $(get_json_value_for_key "${answer}" "result.delegations[$i].prefix") != "" ]]
+        do
+                local prefix=$(get_json_value_for_key "${answer}" "result.delegations[$i].prefix")
+                local nh=$(get_json_value_for_key "${answer}" "result.delegations[$i].next_hop")
+                [[ "${nh}" != "" ]] \
+                        && echo -e "$i:\t${GREEN}${prefix}${norm}\t${GREEN}${nh}${norm}" \
+                        || echo -e "$i:\t${PURPL}${prefix}${norm}\t${WHITE}(not routed)${norm}"
+        ((i++))
+        done
+echo
+}
+
+ipv6_config_list () {
+auto_relogin && list_ipv6_config
+}
+
+# NBA : Function which will print help on error for upd_ipv6_config
+param_ipv6_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_ipv6_config" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|ipv6_enabled=\t\t\t# boolean 'true'/'false': enable/disable IPv6|ipv6_firewall=\t\t\t# boolean: enable/disable the IPv6 firewall|ipv6_prefix_firewall=\t\t# boolean: enable/disable the IPv6 firewall on secondary/delegated prefixes${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}this updates the global IPv6 connection settings, only send the parameter(s) you want to change (partial update)${norm}\n" \
+&& echo -e "NOTE: ${RED}to route one of the 8 delegated /64 prefixes to a LAN device, use upd_ipv6_delegation instead${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} ipv6_enabled=\"true\" ipv6_firewall=\"true\"${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'ipv6_config_object' object (partial)
+check_and_feed_ipv6_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        error=0
+        ipv6_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_ipv6_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "ipv6_enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "ipv6_firewall" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "ipv6_prefix_firewall" ]] \
+                && param_ipv6_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                ! check_if_bool "${valueparam[$idparam]}" \
+                        && param_ipv6_config_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && ipv6_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}"
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo ipv6_config_object=${ipv6_config_object} >&2 # debug
+}
+
+# NBA : Function which will update the global IPv6 connection settings (partial update)
+upd_ipv6_config () {
+        local updipv6config=""
+        error=0
+        check_and_feed_ipv6_config_param "${@}" \
+        && updipv6config=$(update_freebox_api /connection/ipv6/config/ "${ipv6_config_object}")
+        colorize_output "${updipv6config}"
+}
+
+
+
+####### NBA ADDING FUNCTION FOR ROUTING A DELEGATED IPv6 PREFIX TO A LAN DEVICE #######
+
+# NBA : internal function which parses the current 'delegations[]' array into indexed
+# bash arrays using get_json_value_for_key (pure bash tokenizer, no jq needed)
+# --> fills global arrays: _DELEG_PREFIX[] _DELEG_NEXTHOP[]
+_parse_ipv6_delegations () {
+        local answer=$(get_freebox_api /connection/ipv6/config/)
+        _check_success "${answer}" || return 1
+        _DELEG_PREFIX=() ; _DELEG_NEXTHOP=()
+        local i=0
+        dump_json_keys_values "${answer}" >/dev/null
+        while [[ $(get_json_value_for_key "${answer}" "result.delegations[$i].prefix") != "" ]]
+        do
+                _DELEG_PREFIX[$i]=$(get_json_value_for_key "${answer}" "result.delegations[$i].prefix")
+                _DELEG_NEXTHOP[$i]=$(get_json_value_for_key "${answer}" "result.delegations[$i].next_hop")
+        ((i++))
+        done
+        return 0   # see the comment in _parse_lan_routes for why this is required
+}
+
+# NBA : internal function which rebuilds the full 'delegations[]' json array from the
+# _DELEG_PREFIX[] / _DELEG_NEXTHOP[] bash arrays
+_build_ipv6_delegations_json () {
+        local n=${#_DELEG_PREFIX[@]}
+        local i=0
+        local out=""
+        while [[ $i -lt $n ]]
+        do
+                out="${out}{\"prefix\":\"$(_json_escape "${_DELEG_PREFIX[$i]}")\",\"next_hop\":\"$(_json_escape "${_DELEG_NEXTHOP[$i]}")\"},"
+        ((i++))
+        done
+        echo "[${out%,}]"
+}
+
+# NBA : Function which will print help on error for upd_ipv6_delegation
+param_ipv6_delegation_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_ipv6_delegation" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be:${norm}${BLUE}|prefix\t\t\t# one of the 8 delegated /64 prefixes shown by list_ipv6_config, ex: 2a01:e30:d252:a2a2::/64|next_hop=\t\t# ipv6 link-local address of the LAN device to route this prefix to, or an empty string to un-route it${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run list_ipv6_config to see all 8 delegated prefixes and their current next_hop${norm}\n" \
+&& if [[ "${deleg119err}" != "" ]]; then echo -e "ERROR: ${RED}${deleg119err}${norm}\n"; fi \
+&& echo -e "EXAMPLE (route a prefix to a LAN device):\n${BLUE}${progfunct} 2a01:e30:d252:a2a2::/64 next_hop=\"fe80::be30:5bff:feb5:fcc7\"${norm}\n" \
+&& echo -e "EXAMPLE (un-route it):\n${BLUE}${progfunct} 2a01:e30:d252:a2a2::/64 next_hop=\"\"${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+# NBA : Function which will route one of the 8 delegated /64 IPv6 prefixes to a LAN
+# device (identified by its ipv6 link-local next_hop address), or un-route it
+# parameters : prefix next_hop="..."
+# NOTE: the freebox API replaces the WHOLE delegations[] array on every PUT, so this
+# fetches the array, patches the matching prefix, then PUTs it back (same pattern as
+# add/upd_lan_route)
+upd_ipv6_delegation () {
+        local prefix="${1}"
+        local nexthop=""
+        local updipv6deleg=""
+        local i=0 found=0
+        error=0
+        deleg119err=""
+
+        [[ "${prefix}" == "" ]] && param_ipv6_delegation_err
+        if [[ "${error}" != "1" ]]
+        then
+                if [[ "${2}" =~ ^next_hop= ]]
+                then
+                        nexthop="${2#next_hop=}"
+                else
+                        deleg119err="missing mandatory next_hop= parameter"
+                        param_ipv6_delegation_err
+                fi
+        fi
+        if [[ "${error}" != "1" ]]
+        then
+                _parse_ipv6_delegations || { colorize_output '{"success":false,"msg":"unable to fetch IPv6 configuration","error_code":"internal_error"}'; return 1; }
+                while [[ $i -lt ${#_DELEG_PREFIX[@]} ]]
+                do
+                        [[ "${_DELEG_PREFIX[$i]}" == "${prefix}" ]] && found=1 && _DELEG_NEXTHOP[$i]="${nexthop}"
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        updipv6deleg='{"success":false,"msg":"no such delegated prefix","error_code":"noent"}'
+                else
+                        updipv6deleg=$(update_freebox_api /connection/ipv6/config/ "{\"delegations\":$(_build_ipv6_delegations_json)}")
+                fi
+        fi
+        colorize_output "${updipv6deleg}"
+}
+
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "DHCPv6 SERVER CONFIGURATION"
+## => NEW: GET/PUT /dhcpv6/config/
+##
+###########################################################################################
+
+# NBA : Function which will print the current DHCPv6 server configuration
+list_dhcpv6_config () {
+        local answer=$(call_freebox_api "/dhcpv6/config/")
+        echo -e "\n${white}\t\t\t\tDHCPv6 SERVER CONFIGURATION:${norm}\n"
+        _check_success "${answer}" || echo -e "${RED}${answer}${norm}" || return 1
+        [[ -x "$JQ" ]] \
+        && local cache_result=("$(dump_json_keys_values_jq "${answer}")") \
+        || local cache_result=("$(dump_json_keys_values "${answer}")")
+        local enabled=$(get_json_value_for_key "${answer}" "result.enabled")
+        local custom=$(get_json_value_for_key "${answer}" "result.use_custom_dns")
+        local dns=($(echo -e "${cache_result[@]}" |egrep "result.dns\[" |cut -d' ' -f3))
+
+        [[ "${enabled}" != 'true' ]] \
+        && echo -e "${light_purple_sed}DHCPv6 SERVER:\t\t${RED}disabled${norm}" \
+        || echo -e "${light_purple_sed}DHCPv6 SERVER:\t\t${GREEN}enabled${norm}"
+        [[ "${enabled}" == 'true' ]] \
+        && echo -e "${RED}NOTE: enabling the DHCPv6 server may break IPv6 connectivity on some Android devices${norm}"
+        echo -e "${light_purple_sed}USE CUSTOM DNS:\t\t${WHITE}${custom}${norm}"
+        echo -e "${light_purple_sed}DNS SERVERS:\t\t${WHITE}${dns[@]}${norm} (read-only via this API)"
+echo
+}
+
+dhcpv6_config_list () {
+auto_relogin && list_dhcpv6_config
+}
+
+# NBA : Function which will print help on error for upd_dhcpv6_config
+param_dhcpv6_config_err () {
+error=1
+
+[[ "${prog_cmd}" == "" ]] \
+        && local progfunct="upd_dhcpv6_config" \
+        || local progfunct=${prog_cmd}
+
+echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|enabled=\t\t\t# boolean 'true'/'false': enable/disable the DHCPv6 server|use_custom_dns=\t\t\t# boolean 'true'/'false': use your own ipv6 dns servers instead of Free's default${norm}\n" |tr "|" "\n" \
+&& echo -e "WARNING: ${RED}on some Android devices, enabling the DHCPv6 server may break IPv6 connectivity on that device${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} enabled=\"true\"${norm}\n"
+
+unset prog_cmd
+return 1
+}
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'dhcpv6_config_object' object (partial)
+check_and_feed_dhcpv6_config_param () {
+        local param=("${@}")
+        local idparam=0
+        local idnameparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        error=0
+        dhcpv6_config_object=("")
+
+        [[ "$numparam" -lt "1" ]] && param_dhcpv6_config_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "use_custom_dns" ]] \
+                && param_dhcpv6_config_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                ! check_if_bool "${valueparam[$idparam]}" \
+                        && param_dhcpv6_config_err
+        ((idparam++))
+        done
+
+        [[ "${error}" != "1" ]] \
+                && dhcpv6_config_object=$(
+                while [[ "${nameparam[$idnameparam]}" != "" ]]
+                do
+                        echo "\"${nameparam[$idnameparam]}\":${valueparam[$idnameparam]}"
+                ((idnameparam++))
+                done | tr "\n" "," |sed -e 's@^@{@' -e 's@,$@}@' ) \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo dhcpv6_config_object=${dhcpv6_config_object} >&2 # debug
+}
+
+# NBA : Function which will update the DHCPv6 server configuration (partial update)
+upd_dhcpv6_config () {
+        local upddhcpv6config=""
+        error=0
+        check_and_feed_dhcpv6_config_param "${@}" \
+        && upddhcpv6config=$(update_freebox_api /dhcpv6/config/ "${dhcpv6_config_object}")
+        colorize_output "${upddhcpv6config}"
+}
+                                                             
+
+
+
+
+
+###########################################################################################
+##
+## FRONTEND FUNCTIONS: library frontend function for managing "LAN ROUTING TABLE API"
+## => NEW: added to support Freebox API v16 GET/PUT /lan/routes/ (Routing Config API)
+##
+## NOTE ON jq: the freebox API replaces the WHOLE routing table on every single PUT
+## (there is no per-route endpoint), so add/upd/del/ena/dis_lan_route all need to:
+##   1) fetch the current table
+##   2) rebuild it in memory with the wanted change
+##   3) PUT the whole table back
+## Step (2) is a destructive rewrite, so - exactly like the rest of this library - it
+## NEVER depends on jq: it uses the library's own JSON tokenizer (get_json_value_for_key,
+## which is pure bash, no jq involved) to pull every field into indexed bash arrays,
+## then rebuilds the JSON array by hand with the same "echo ... | tr | sed" idiom used
+## everywhere else in this file. jq is only used - when present - for the FAST display
+## cache in list_lan_routes (dump_json_keys_values_jq), same as list_wifi-ap / list_freeplug.
+##
+###########################################################################################
+
+
+####### NBA ADDING FUNCTION FOR MANAGING LAN STATIC ROUTES (ROUTING TABLE) API #######
+
+# NBA : internal function which parses the current routing table into indexed bash
+# arrays using get_json_value_for_key (pure bash tokenizer - always available, no jq
+# needed). This is the function used before any DESTRUCTIVE rewrite of the table,
+# so correctness (not speed) is what matters here.
+# --> fills global arrays: _RT_PREFIX[] _RT_GATEWAY[] _RT_ENABLED[] _RT_DESCR[]
+# --> success return 0 ; error return 1
+_parse_lan_routes () {
+        local answer=$(get_freebox_api /lan/routes/)
+        _check_success "${answer}" || return 1
+        _RT_PREFIX=() ; _RT_GATEWAY=() ; _RT_ENABLED=() ; _RT_DESCR=()
+        local i=0
+        dump_json_keys_values "${answer}" >/dev/null   # cache once for get_json_value_for_key
+        while [[ $(get_json_value_for_key "${answer}" "result[$i].prefix") != "" ]]
+        do
+                _RT_PREFIX[$i]=$(get_json_value_for_key "${answer}" "result[$i].prefix")
+                _RT_GATEWAY[$i]=$(get_json_value_for_key "${answer}" "result[$i].gateway")
+                _RT_ENABLED[$i]=$(get_json_value_for_key "${answer}" "result[$i].enabled")
+                _RT_DESCR[$i]=$(get_json_value_for_key "${answer}" "result[$i].description")
+        ((i++))
+        done
+        return 0   # NOTE: without this, the function's exit status is that of the last
+                   # ((i++)) executed in the loop above, which is 1 (bash: "((expr))"
+                   # fails when expr is 0) whenever the table has exactly ONE route -
+                   # every caller below checks this return code, so that edge case would
+                   # otherwise be silently (and wrongly) treated as a fetch failure
+}
+
+# NBA : internal function which rebuilds a full 'routes[]' json array from the
+# _RT_PREFIX[] / _RT_GATEWAY[] / _RT_ENABLED[] / _RT_DESCR[] bash arrays (same
+# json-building idiom as check_and_feed_fw_redir_param : "tr + sed")
+# NOTE: a route whose _RT_PREFIX[$i] has been blanked out (del_lan_route) is skipped
+_build_lan_routes_json () {
+        local n=${#_RT_PREFIX[@]}
+        local i=0
+        local out=""
+        while [[ $i -lt $n ]]
+        do
+                [[ "${_RT_PREFIX[$i]}" != "" ]] \
+                && out="${out}{\"prefix\":\"$(_json_escape "${_RT_PREFIX[$i]}")\",\"gateway\":\"$(_json_escape "${_RT_GATEWAY[$i]}")\",\"enabled\":${_RT_ENABLED[$i]:-true},\"description\":\"$(_json_escape "${_RT_DESCR[$i]}")\"},"
+        ((i++))
+        done
+        echo "[${out%,}]"
+}
+
+
+# NBA : Function which will list all lan static routes (routing table)
+# This function do not take parameters
+# --> success return 0 and a list of static routes
+# --> error return 1 and print stderr
+# NOTE: uses _parse_lan_routes (get_json_value_for_key, one full value per call) rather
+# than the cache+egrep+cut idiom used for other list_* functions in this library, because
+# 'description' is a free-text field that routinely contains spaces - cut -f3- on a
+# multi-word value gets word-split when assigned into a bash array (arr=($(...))),
+# silently truncating anything after the first word. get_json_value_for_key does a plain
+# scalar assignment per index, so it is not affected by word-splitting.
+list_lan_routes () {
+	_parse_lan_routes || { echo -e "${RED}unable to fetch routing table${norm}" >&2; return 1; }
+	echo -e "\n${white}\t\t\t\tLAN STATIC ROUTES (ROUTING TABLE):${norm}\n"
+	echo -e "$(_hdr_field '#:' 6)$(_hdr_field 'prefix:' 26)$(_hdr_field 'gateway:' 20)$(_hdr_field 'state:' 12)$(_hdr_field 'description:' 0)"
+	local i=0
+	while [[ "${_RT_PREFIX[$i]}" != "" ]]
+	do
+		local padded_prefix padded_gateway padded_state
+		printf -v padded_prefix "%-24s  " "${_RT_PREFIX[$i]}"
+		printf -v padded_gateway "%-18s  " "${_RT_GATEWAY[$i]}"
+		[[ "${_RT_ENABLED[$i]}" == "true" ]] \
+			&& printf -v padded_state "%-10s  " "active" \
+			|| printf -v padded_state "%-10s  " "disabled"
+		[[ "${_RT_ENABLED[$i]}" == "true" ]] \
+			&& echo -e "$(_row_num $i)${GREEN}${padded_prefix}${padded_gateway}${padded_state}${norm}${RED}${_RT_DESCR[$i]}${norm}" \
+			|| echo -e "$(_row_num $i)${PURPL}${padded_prefix}${padded_gateway}${padded_state}${norm}${BLUE}${_RT_DESCR[$i]}${norm}"
+	((i++))
+	done
+echo
+}
+
+# NBA : Function which will print help on error for LAN ROUTE functions :
+# - add_lan_route
+# - upd_lan_route
+# - del_lan_route
+# - ena_lan_route
+# - dis_lan_route
+# ${action} parameter must be set by function which calling 'param_lan_route_err' (or by primitive)
+# This function return 1
+
+param_lan_route_err () {
+# when calling this function inside this lib, prog_cmd= and prog_list= must be null: ""
+# when calling this function from an external program, you must set 'prog_cmd' and 'list_cmd' values you use to call this function as a GLOBAL VARIABLES. ex : prog_cmd="fbxvm-ctrl add lan_route" list_cmd="fbxvm-ctrl list lan_route"
+error=1
+
+	[[ "${action}" == "add" \
+	|| "${action}" == "upd" \
+	|| "${action}" == "ena" \
+	|| "${action}" == "dis" \
+	|| "${action}" == "del" ]] \
+	&& local funct="${action}_lan_route"
+
+[[ "${prog_cmd}" == "" ]] \
+	&& local progfunct=${funct} \
+	|| local progfunct=${prog_cmd}
+[[ "${list_cmd}" == "" ]] \
+	&& local listfunct="list_lan_routes" \
+	|| local listfunct=${list_cmd}
+
+# add_lan_route param error
+[[ "${action}" == "add" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|prefix=\t\t\t# destination network in CIDR format, ex: 192.168.42.0/24|gateway=\t\t# gateway ip address for this route|enabled=\t\t# boolean 'true' or 'false': default 'true'|description=\t\t# string: free text description ${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to create a static route: ${norm}\n${BLUE}prefix= \ngateway=${norm}\n" \
+&& echo -e "WARNING: ${RED}the following networks are always rejected by the freebox as invalid routes:${norm}${BLUE}|127.0.0.0/8\t\t# loopback network|169.254.0.0/16\t\t# link-local addresses|224.0.0.0/4\t\t# IANA multicast|192.168.27.0/24\t\t# used for VPN and guest WIFI addresses${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}only one ENABLED route may exist for a given prefix - adding a second enabled route with a prefix that already has an active route returns an 'exists' error (add it with enabled=\"false\" instead, or disable/delete the existing one first)${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} prefix=\"192.168.42.0/24\" gateway=\"192.168.1.38\" description=\"My first route\"${norm}\n"
+
+# upd_lan_route param error
+[[ "${action}" == "upd" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be some of:${norm}${BLUE}|prefix=\t\t\t# prefix (CIDR) of the route to update, ex: 192.168.42.0/24|gateway=\t\t# new gateway ip address|enabled=\t\t# boolean 'true' or 'false'|description=\t\t# string: free text description ${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to get the list of all routes 'prefix' ${norm}\n" \
+&& echo -e "NOTE: ${RED}minimum parameters to specify on cmdline to update a static route: ${norm}${BLUE}|prefix=${norm}\n" |tr "|" "\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} prefix=\"192.168.42.0/24\" gateway=\"192.168.1.39\"${norm}\n"
+
+# del_lan_route param error
+[[ "${action}" == "del" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|prefix\t\t\t# CIDR prefix of the route to delete${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to get the list of all static routes (showing all 'prefix'):${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 192.168.42.0/24${norm}\n"
+
+# ena_lan_route param error
+[[ "${action}" == "ena" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|prefix\t\t\t# CIDR prefix of the route to enable${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to get the list of all static routes (showing all 'prefix'):${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 192.168.42.0/24${norm}\n"
+
+# dis_lan_route param error
+[[ "${action}" == "dis" ]] \
+&& echo -e "\nERROR: ${RED}<param> for \"${progfunct}\" must be :${norm}${BLUE}|prefix\t\t\t# CIDR prefix of the route to disable${norm}\n" |tr "|" "\n" \
+&& echo -e "NOTE: ${RED}please run \"${listfunct}\" to get the list of all static routes (showing all 'prefix'):${norm}\n${BLUE}${listfunct}${norm}\n" \
+&& echo -e "EXAMPLE:\n${BLUE}${progfunct} 192.168.42.0/24${norm}\n"
+
+unset prog_cmd list_cmd
+return 1
+}
+
+
+
+# NBA : This function validate contents of parameters and fullfill variables
+# --> Return a json 'lan_route_object' object
+# --> also sets (non-local, side-channel, same idiom as 'id' in check_and_feed_dhcp_param):
+#     prefix / gateway / enabled / description  (empty string = "not supplied by user")
+# - prefix
+# - gateway
+# - enabled
+# - description
+check_and_feed_lan_route_param () {
+        local param=("${@}")
+        local idparam=0
+        local numparam="$#"
+        local nameparam=("")
+        local valueparam=("")
+        local prefix_err_msg="prefix must be a valid CIDR network (ex: 192.168.42.0/24)"
+        local gw_err_msg="gateway must be a valid ip address"
+        error=0
+        prefix="" ; gateway="" ; enabled="" ; description=""
+        lan_route_object=("")
+
+        # test params and assign values in 2 arrays : nameparam[$idparam] and valueparam[$idparam]
+        [[ "$numparam" -lt "1" ]] && param_lan_route_err
+        [[ "$numparam" -ge "1" ]] && \
+        while [[ "${param[$idparam]}" != "" ]]
+        do
+                [[ "$(echo ${param[$idparam]}|cut -d= -f1)" != "prefix" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "gateway" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "enabled" \
+                && "$(echo ${param[$idparam]}|cut -d= -f1)" != "description" ]] \
+                && param_lan_route_err && break
+                nameparam[$idparam]=$(echo "${param[$idparam]}"|cut -d= -f1)
+                valueparam[$idparam]=$(echo -e"${param[$idparam]}"|cut -d= -f2-)
+                [[ "${nameparam[$idparam]}" == "prefix" ]] && prefix=${valueparam[$idparam]}
+                [[ "${nameparam[$idparam]}" == "gateway" ]] && gateway=${valueparam[$idparam]}
+                [[ "${nameparam[$idparam]}" == "enabled" ]] && enabled=${valueparam[$idparam]}
+                [[ "${nameparam[$idparam]}" == "description" ]] && description=${valueparam[$idparam]}
+        ((idparam++))
+        done
+
+        # testing 'prefix' has a CIDR format
+        [[ "${prefix}" != "" && "${error}" != "1" ]] \
+                && ! [[ "${prefix}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$ ]] \
+                && addlanroute="${prefix_err_msg}" \
+                && param_lan_route_err
+
+        # testing 'gateway' is a valid ip address
+        [[ "${gateway}" != "" && "${error}" != "1" ]] \
+                && ! check_if_ip $gateway \
+                && addlanroute="${gw_err_msg}" \
+                && param_lan_route_err
+
+        # testing 'enabled', when supplied, is a boolean
+        [[ "${enabled}" != "" && "${error}" != "1" ]] \
+                && ! check_if_bool "${enabled}" \
+                && addlanroute="enabled must be a boolean: true or false" \
+                && param_lan_route_err
+
+        # 'prefix' is always mandatory (it is the route matching key)
+        if [[ "${error}" != "1" ]]
+        then
+                echo ${nameparam[@]}|grep -q 'prefix'
+                [[ "$?" -eq "1" ]] && param_lan_route_err
+        fi
+
+        # 'gateway' is mandatory for action=add
+        if [[ "${action}" == "add" && "${error}" != "1" ]]
+        then
+                echo ${nameparam[@]}|grep -q 'gateway'
+                [[ "$?" -eq "1" ]] && param_lan_route_err
+        fi
+
+        # Affecting default values (only for 'add')
+        [[ "${enabled}" == "" && "${action}" == "add" ]] && enabled=true
+        [[ "${description}" == "" && "${action}" == "add" ]] && description=""
+
+        # building 'lan_route_object' json object (used by add_lan_route only) :
+        # 'enabled' must be a real boolean (unquoted)
+        [[ "${error}" != "1" ]] \
+                && lan_route_object="{\"prefix\":\"$(_json_escape "${prefix}")\",\"gateway\":\"$(_json_escape "${gateway}")\",\"enabled\":${enabled:-true},\"description\":\"$(_json_escape "${description}")\"}" \
+                && return 0 \
+                || return 1
+
+        [[ "${debug}" == "1" ]] && echo lan_route_object=${lan_route_object} >&2 # debug
+}
+
+
+# NBA : Function which will add a new static route to the routing table
+# This function takes following parameters :
+# - prefix=       (mandatory - CIDR network, ex: 192.168.42.0/24)
+# - gateway=      (mandatory - gateway ip address)
+# - enabled=      (optionnal - default: true)
+# - description=  (optionnal BUT value must be "quoted")
+# NOTE: the freebox API replaces the WHOLE routing table on every PUT, so this function
+# fetches the current table, appends the new route, then PUTs the table back
+add_lan_route () {
+        local addlanroute=""
+        local routes=""
+        action=add
+        error=0
+        check_and_feed_lan_route_param "${@}"
+        if [[ "$error" != "1" ]]
+        then
+                routes=$(get_freebox_api /lan/routes/)
+                _check_success "${routes}" \
+                && routes=$(echo "${routes}" |sed -n 's/.*"result":\(\[.*\]\).*/\1/p') \
+                || routes="[]"
+                [[ "${routes}" == "" ]] && routes="[]"
+                routes=$(echo "${routes}" |sed -e 's@^\[@@' -e 's@\]$@@')
+                [[ "${routes}" != "" ]] \
+                        && routes="[${routes},${lan_route_object}]" \
+                        || routes="[${lan_route_object}]"
+                addlanroute=$(update_freebox_api /lan/routes/ "${routes}")
+        fi
+        colorize_output "${addlanroute}"
+        unset action
+}
+
+
+# NBA : Function which will update an existing static route (matched by 'prefix')
+# This function takes 'prefix=' + gateway=/enabled=/description= parameters
+# --> parses the whole table via _parse_lan_routes (pure bash, no jq needed),
+#     patches the matching entry in the _RT_* arrays, then rebuilds + PUTs the table
+upd_lan_route () {
+        local updlanroute=""
+        local i=0 found=0
+        action=upd
+        error=0
+        check_and_feed_lan_route_param "${@}"
+        if [[ "$error" != "1" ]]
+        then
+                _parse_lan_routes || { colorize_output '{"success":false,"msg":"unable to fetch routing table","error_code":"internal_error"}'; unset action; return 1; }
+                while [[ $i -lt ${#_RT_PREFIX[@]} ]]
+                do
+                        if [[ "${_RT_PREFIX[$i]}" == "${prefix}" ]]
+                        then
+                                found=1
+                                [[ "${gateway}" != "" ]] && _RT_GATEWAY[$i]="${gateway}"
+                                [[ "${enabled}" != "" ]] && _RT_ENABLED[$i]="${enabled}"
+                                [[ "${description}" != "" ]] && _RT_DESCR[$i]="${description}"
+                        fi
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        updlanroute='{"success":false,"msg":"no such route (unknown prefix)","error_code":"noent"}'
+                else
+                        updlanroute=$(update_freebox_api /lan/routes/ "$(_build_lan_routes_json)")
+                fi
+        fi
+        colorize_output "${updlanroute}"
+        unset action
+}
+
+
+# NBA : Function which will delete an existing static route (matched by 'prefix')
+# This function takes 'prefix' parameter
+del_lan_route () {
+        local prefix=${1}
+        local dellanroute=""
+        local i=0 found=0
+        action=del
+        error=0
+        [[ "${prefix}" == "" ]] && param_lan_route_err
+        if [[ "${error}" != "1" ]]
+        then
+                _parse_lan_routes || { colorize_output '{"success":false,"msg":"unable to fetch routing table","error_code":"internal_error"}'; return 1; }
+                while [[ $i -lt ${#_RT_PREFIX[@]} ]]
+                do
+                        [[ "${_RT_PREFIX[$i]}" == "${prefix}" ]] && found=1 && _RT_PREFIX[$i]=""
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        dellanroute='{"success":false,"msg":"no such route (unknown prefix)","error_code":"noent"}'
+                else
+                        dellanroute=$(update_freebox_api /lan/routes/ "$(_build_lan_routes_json)")
+                fi
+        fi
+        colorize_output "${dellanroute}"
+        unset action
+}
+
+
+# NBA : Function which will enable an existing static route (matched by 'prefix')
+# This function takes 'prefix' parameter
+ena_lan_route () {
+        local prefix=${1}
+        local enalanroute=""
+        local i=0 found=0
+        action=ena
+        error=0
+        [[ "${prefix}" == "" ]] && param_lan_route_err
+        if [[ "${error}" != "1" ]]
+        then
+                _parse_lan_routes || { colorize_output '{"success":false,"msg":"unable to fetch routing table","error_code":"internal_error"}'; return 1; }
+                while [[ $i -lt ${#_RT_PREFIX[@]} ]]
+                do
+                        [[ "${_RT_PREFIX[$i]}" == "${prefix}" ]] && found=1 && _RT_ENABLED[$i]="true"
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        enalanroute='{"success":false,"msg":"no such route (unknown prefix)","error_code":"noent"}'
+                else
+                        enalanroute=$(update_freebox_api /lan/routes/ "$(_build_lan_routes_json)")
+                fi
+        fi
+        colorize_output "${enalanroute}"
+        unset action
+}
+
+
+# NBA : Function which will disable an existing static route (matched by 'prefix')
+# This function takes 'prefix' parameter
+dis_lan_route () {
+        local prefix=${1}
+        local dislanroute=""
+        local i=0 found=0
+        action=dis
+        error=0
+        [[ "${prefix}" == "" ]] && param_lan_route_err
+        if [[ "${error}" != "1" ]]
+        then
+                _parse_lan_routes || { colorize_output '{"success":false,"msg":"unable to fetch routing table","error_code":"internal_error"}'; return 1; }
+                while [[ $i -lt ${#_RT_PREFIX[@]} ]]
+                do
+                        [[ "${_RT_PREFIX[$i]}" == "${prefix}" ]] && found=1 && _RT_ENABLED[$i]="false"
+                ((i++))
+                done
+                if [[ "${found}" -eq "0" ]]
+                then
+                        dislanroute='{"success":false,"msg":"no such route (unknown prefix)","error_code":"noent"}'
+                else
+                        dislanroute=$(update_freebox_api /lan/routes/ "$(_build_lan_routes_json)")
+                fi
+        fi
+        colorize_output "${dislanroute}"
+        unset action
+}
+
+
+
+
 
 
 
@@ -6870,7 +9657,8 @@ check_login_freebox || (echo -e "${RED}You must login to access this function: a
     local wsdebug=""
     # defining a pseudo 'uniq' id (chance to have it twice are small enough)
     local reqid=$(date +%s | cut -b5-10)
-    rid=${reqid##0}    # adding ##0 to avoid bash interpret $rid as octal when rid=00xxxx
+    #rid=${reqid##0}    # adding ##0 to avoid bash interpret $rid as octal when rid=00xxxx
+    rid=${reqid/0/3}    # replacing 0 by arbitrary number to avoid interpret $rid as octal when rid=00xxxx
     action='ul'
 
     check_and_feed_direct_ul ${@}
@@ -6951,6 +9739,33 @@ done
 ##  DIRECT ACTIONS: library direct actions (simple API call, e.g 'reboot' action)
 ## 
 ###########################################################################################
+
+
+# simple API call using curl forcing HTTP GET => '-d' options are passe as URL param :
+backup_fbx_config () {
+    local api_url="backup/config/export"
+    local backup_date=$(date +%Y%m%d-%H%M%S)
+    local output_file="config_fbx_${backup_date}.bin"
+    local output_string="--output"
+    local options=()
+    local url="$FREEBOX_URL"$( echo "/$_API_BASE_URL/v$_API_VERSION/$api_url" | sed 's@//@/@g')
+    options=(-H "Content-Type: application/json")
+    [[ -n "$_SESSION_TOKEN" ]] && options+=(-H "X-Fbx-App-Auth: $_SESSION_TOKEN")
+    [[ -n "$api_url" ]] && options+=(-X GET) \
+           && options+=("--progress-bar")
+    mk_bundle_cert_file fbx-cacert                # create CACERT BUNDLE FILE
+    [[ -n "$FREEBOX_CACERT" ]] && [[ -f "$FREEBOX_CACERT" ]] \
+           && options+=(--cacert "$FREEBOX_CACERT") \
+           || options+=("-k")
+[[ "${debug}" == "1" ]] && echo -e "backup_fbx_config request:\ncurl -s $url ${options[@]} $output_string $output_file" >&2
+    curl -s "$url" "${options[@]}" "$output_string" "$output_file" \
+    del_bundle_cert_file fbx-cacert               # remove CACERT BUNDLE FILE
+    [[ "$(head -c 4 $output_file)" != "YEAH" ]] \
+    && echo -e "${RED}Backup failed !${norm}" \
+    && rm -f $output_file \
+    || ls -l $output_file
+}
+
 
 num_id_reboot_err () {
 local id=${1}
@@ -7628,5 +10443,186 @@ unset _FREEBOX_URL _FREEBOX_CACERT _ITALY _PASSWORD
 #__________
 # 20250114
 # --> modifying timeout to 0.2s in detect_term_bg_color () to suite on weak CPU or old systems
+#
+#__________
+# 20250329
+# --> fixing error in WAN PKI support comments
+# --> Adding more configuration details in PKI support comments
+#
+#__________
+# 20250416
+# --> Adding backup_fbx_config() function to backup freebox configuration file
+#
+#__________
+# 20260802
+# --> fixing exit status bug in list_dl_task_api() list_dhcp_static_lease() list_fw_redir():
+#     each ended its display loop on "((i++))" / "((j++))" as the LAST statement before
+#     "done || return 1" - "((expr))" exits 1 (failure) when expr is 0, and post-increment's
+#     value is the OLD value, so on the last iteration where the counter was still 0 (ie:
+#     exactly ONE result to display), "done || return 1" wrongly returned failure even
+#     though the listing printed correctly and nothing went wrong
+# --> reproduced directly against list_fw_redir with exactly one NAT rule configured:
+#     printed the correct output but returned $?=1 - confirmed the same 3 functions,
+#     confirmed zero-result and 2+ result cases were already returning 0 (unaffected)
+# --> fixed by replacing "done || return 1" with "done" + explicit "return 0" in all
+#     three functions
+#
+#__________
+# 20260802
+# --> adding LAN routing table support: list_lan_routes() add_lan_route() upd_lan_route()
+#     del_lan_route() ena_lan_route() dis_lan_route()  (/lan/routes/ - the freebox rewrites
+#     the WHOLE table on every PUT, no per-route endpoint - fetch/patch/rebuild/PUT done
+#     with the library's own pure-bash JSON tokenizer, jq never required)
+# --> adding DHCP global configuration support: list_dhcp_config() upd_dhcp_config()
+#     (/dhcp/config/ - partial update)
+# --> adding DHCP options (RFC 2132) support: list_dhcp_options() add_dhcp_option()
+#     upd_dhcp_option() del_dhcp_option()  (id/val validated against the correct RFC 2132
+#     type - bool/u8/u16/u32/s32/ip/ip_list/hexstring/string - before ever calling the API)
+# --> adding compute_dhcp119_string(): computes the RFC 3397 domain_search hex value
+#     (DNS-style suffix-compressed) from plain domain names - verified byte-for-byte
+#     against real DHCP server output
+# --> adding compute_dhcp121_string(): computes the RFC 3442 classless_static_route hex
+#     value from "prefix/masklen=gateway" pairs - verified against RFC 3442's own worked
+#     example - rejects a prefix with host bits set and suggests the correct network
+#     address instead of silently miscomputing it
+# --> adding check_if_bool() check_if_u8() check_if_u16() check_if_u32() check_if_s32()
+#     check_if_ip_list() check_if_hexstring() + _dhcp_option_type(): extending the
+#     check_if_* family to validate DHCP option value types (case statement, not an
+#     associative array, to keep old-bash compatibility)
+# --> adding _json_escape(): escapes backslash/quote/newline/tab/CR before any
+#     user-supplied value is embedded into a JSON body - applied at all 11
+#     JSON-string-building sites added below (a value containing '"' or '\' used to
+#     silently produce malformed JSON)
+# --> adding FTP server configuration support: list_ftp_config() upd_ftp_config()
+#     (/ftp/config/)
+# --> adding Samba (SMB) configuration support: list_smb_config() upd_smb_config()
+#     (/netshare/samba/)
+# --> adding AFP (Apple file sharing) configuration support: list_afp_config()
+#     upd_afp_config()  (/netshare/afp/)
+# --> adding LAN browser support: list_lan_interfaces() list_lan_hosts() upd_lan_host()
+#     del_lan_host()  (/lan/browser/ - hosts colored green=online / purple=offline;)
+# --> adding Firewall DMZ support: list_fw_dmz() upd_fw_dmz() ena_fw_dmz() dis_fw_dmz()
+#     (/fw/dmz/)
+# --> adding Firewall incoming ports support: list_fw_incoming() upd_fw_incoming()
+#     ena_fw_incoming() dis_fw_incoming()  (/fw/incoming/ - remote access bindings for
+#     freebox services: admin UI, FTP, VPN, bittorrent, ...)
+# --> adding IPv6 connection configuration support: list_ipv6_config() upd_ipv6_config()
+#     upd_ipv6_delegation()  (/connection/ipv6/config/ - upd_ipv6_delegation() routes one
+#     of the 8 delegated /64 prefixes to a LAN device's link-local address, or un-routes it)
+# --> adding DHCPv6 server configuration support: list_dhcpv6_config() upd_dhcpv6_config()
+#     (/dhcpv6/config/)
+# --> 98 new functions total, following the existing list_*/param_***_err/
+#     check_and_feed_***_param/add_-upd_-del_-ena_-dis_* conventions throughout - 0 name
+#     collision with the 218 existing functions (checked)
+# --> adding lan_host_show() and lan_host_detail(): two functions missed when the LAN
+#     browser support was first added
+# --> lan_host_show [interface] mac=<mac> : same single-row display as list_lan_hosts,
+#     filtered to one host matched by its mac address (like vm_show relative to list_vm)
+#     - fetches the single-host endpoint directly (GET /lan/browser/<iface>/ether-<mac>/)
+#     rather than fetching the whole list and filtering
+# --> lan_host_detail [interface] mac=<mac> : full detail dump for one host (like
+#     vm_detail) - crucially, loops over EVERY entry in l3connectivities[], not just the
+#     first one, since a single host can have an ipv4 address AND one or more ipv6
+#     addresses active at the same time (confirmed against the freebox API doc's own
+#     LanHost object definition and example response) - also lists every discovered
+#     name and its source (dhcp/mdns/netbios/upnp/...)
+#     both take an optional leading interface argument (default "pub", same as
+#     list_lan_hosts) so they stay consistent with the rest of the LAN browser
+#     functions, in addition to the mandatory mac=
+#
+#__________
+# 20260803
+# --> cosmetic: widening column spacing in list_ftp_config() list_smb_config()
+#     list_afp_config() and param_afp_config_err() for a more readable layout on
+#     wider terminals
+#
+#__________
+# 20260803
+# --> fixing detect_term_bg_color() crashing when sourced in a non-interactive shell
+#     with 'set -e' active (ex: GitLab CI job shells) - reported in issue #5, PR #4
+#     proposed a partial fix (checked only stdin with [[ -t 0 ]], and translated to
+#     English below - the original PR's comments were in French, which this library
+#     does not allow, since Iliadbox with the same API also exists in Italy)
+# --> root cause: the OSC 11 query/response trick used to detect the terminal's
+#     background color needs a REAL interactive terminal on BOTH stdin (to read the
+#     answer) and stdout (to send the query) - checking only stdin is not enough, a
+#     terminal's response can't be captured if only one side is a real tty
+# --> the actual crash mechanism: "read -t 0.2 ..." was a bare (unguarded) statement;
+#     under 'set -e', ANY sourced script has its whole calling shell killed the instant
+#     a single unguarded command fails - which is exactly what a timed-out/failed read
+#     does when there is no terminal to answer it (confirmed by reproducing the crash
+#     locally: sourcing the original detect_term_bg_color() with 'set -e' and stdin
+#     redirected from /dev/null aborts immediately with no further output)
+# --> fixed by: (1) checking "[[ -t 0 && -t 1 ]]" before even attempting the query,
+#     skipping it entirely (BG="") when either side is not a real terminal, and
+#     (2) appending "|| BG=""" to the read itself, so its exit status can never
+#     propagate as a fatal error under 'set -e' regardless of tty state
+# --> verified: (a) reproduced the original crash (set -e + no tty aborts immediately),
+#     (b) confirmed the fix survives the same scenario with a sensible default color,
+#     (c) confirmed normal interactive-terminal detection is unchanged (tested with a
+#     real pty) - so this does not break real terminal usage while also no longer
+#     breaking GitLab CI (or any other tty-less shell) 
+#
+#__________
+# 20260803
+# --> fixing column misalignment in list_fw_incoming() list_lan_routes() list_lan_hosts()
+#     list_dhcp_options() list_lan_interfaces(): a fixed tab count after a variable-length
+#     field (ex: 'id' like "http" vs "bittorrent-main", 'prefix' like "0.0.0.0/0" vs
+#     "192.168.42.0/24", 'vendor_name' like "Apple, Inc." vs "Hon Hai Precision Ind.
+#     Co.,Ltd.") misaligns every column that follows it, since tab stops depend on
+#     cumulative preceding character count
+# --> fixed with printf fixed-width padding (printf -v var "%-Ns" "$value") computed on
+#     the PLAIN text, then wrapped in color codes afterwards - this matters because
+#     padding a string that already contains ANSI escape codes counts the invisible
+#     escape bytes towards the declared width and re-breaks the alignment
+# --> each padding format string also carries 2 literal trailing spaces (ex: "%-24s  ")
+#     so a value that exceeds its assumed column width (ex: a long vendor_name like
+#     "Hon Hai Precision Ind. Co.,Ltd.") still gets a guaranteed minimum gap before the
+#     next column, instead of colliding directly into it with zero separator
+#
+#__________
+# 20260804
+# --> fixing del_lan_host(): there IS a DELETE endpoint for LAN hosts after all
+#     (DELETE /lan/browser/<interface>/ether-<mac>/) - it is not in the official
+#     freebox API documentation, but was confirmed via the FreeboxOS web interface's
+#     own network traffic when using its "forget this device" feature. The function
+#     now takes only a plain MAC address (ex: aa:e7:cf:5b:38:72) and builds the actual
+#     host id ("ether-<mac>") itself,  carries an UNDOCUMENTED API warning, same 
+#     treatment as domain_setdefault() / backup_fbx_config() below
+# --> documenting backup_fbx_config() in the README for the first time (it already
+#     existed in the library, added 20250416, but was never documented) - it uses the
+#     undocumented backup/config/export endpoint, same "USE AT YOUR OWN RISK" warning
+#     as the DOMAIN NAME functions, since it has been reliably working for years
+#     despite not being part of the official API documentation
+#
+#__________
+# 20260805
+# --> adding "all" support to lan_host_detail(): "lan_host_detail [interface] all"
+#     loops over every host discovered on the interface (reusing _parse_lan_hosts) and
+#     prints full detail for each one, instead of requiring a single mac=
+# --> adding human-readable parsing of the LanHost 'info' object (dhcp/mdns/upnp/...
+#     discovery data, ex: "Service: raop", "Vendor Class Identifier", "modelName") to
+#     lan_host_detail() via new _print_lan_host_info() - this does NOT hardcode any
+#     category or key name (freebox can add more discovery sources/keys over time):
+#     it reuses the library's own JSON tokenizer, which already flattens this
+#     arbitrarily nested object into "result.info.<category>.<key> = <value>" lines
+#     (spaces/colons inside keys included), and only filters out the aggregate
+#     "result.info[.<category>] = {...}" lines that repeat the same data as raw JSON
+# --> adding domain_name= support to upd_lan_host(): the freebox API added a way to set
+#     a LAN host's local domain name (ex: "my-nas.home") via PUT /lan/browser/, and it
+#     is also now a valid DHCP option (RFC 2132 option 15, "domain_name", string type,
+#     confirmed against the latest freebox API documentation) - both are documented
+#     and implemented: domain_name= on upd_lan_host, and "domain_name" on
+#     add_dhcp_option/upd_dhcp_option
+# --> adding check_if_lan_domain_name(): validates a LanHost domain_name against the
+#     freebox API's documented rules (must end with ".home", 63 chars max, a label
+#     cannot start with a digit/hyphen, no consecutive dots, empty string explicitly
+#     allowed to mean "no local domain") - distinct from the existing check_if_domain
+#     (used for the global freebox remote-access domain), since the validation rules
+#     are different
+# --> adding a NOTE to add_lan_route()'s help text about a newly documented API
+#     behaviour: only one ENABLED route may exist for a given prefix - a second
+#     enabled route with the same prefix now returns an "exists" error
+#
 #
 #
